@@ -22,3 +22,6 @@ PocketEthernet.
    sudo python3 main.py
    ```
    Se recomienda ejecutar como superusuario para el escaneo de red.
+
+3. En la pesta\u00f1a **Actualizaci\u00f3n** puedes comprobar si existen
+   nuevas versiones del c\u00f3digo y aplicarlas autom\u00e1ticamente.
