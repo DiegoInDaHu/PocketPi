@@ -58,9 +58,13 @@ class NetworkMonitor(tk.Tk):
         notebook = ttk.Notebook(self)
         self.info_frame = ttk.Frame(notebook)
         self.scan_frame = ttk.Frame(notebook)
+        self.ping_frame = ttk.Frame(notebook)
+        self.config_frame = ttk.Frame(notebook)
         self.update_frame = ttk.Frame(notebook)
         notebook.add(self.info_frame, text="Informaci\u00f3n")
         notebook.add(self.scan_frame, text="Escaneo")
+        notebook.add(self.ping_frame, text="Ping")
+        notebook.add(self.config_frame, text="Configuraci\u00f3n")
         notebook.add(self.update_frame, text="Actualizaci\u00f3n")
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
@@ -114,6 +118,78 @@ class NetworkMonitor(tk.Tk):
 
         self.port_text = tk.Text(self.scan_frame, height=6)
         self.port_text.pack(fill="both", expand=True, padx=5, pady=5)
+
+        # Ping widgets
+        ttk.Label(self.ping_frame, text="Host o IP:").pack(pady=5)
+        self.ping_entry = ttk.Entry(self.ping_frame)
+        self.ping_entry.pack(fill="x", padx=5)
+        self.ping_button = ttk.Button(
+            self.ping_frame, text="Hacer ping", command=self.run_ping
+        )
+        self.ping_button.pack(pady=5)
+        self.ping_text = tk.Text(self.ping_frame, height=8)
+        self.ping_text.pack(fill="both", expand=True, padx=5, pady=5)
+
+        # Network configuration widgets
+        row = 0
+        ttk.Label(self.config_frame, text="Interfaz:").grid(row=row, column=0, sticky="w", pady=2)
+        self.config_interface_var = tk.StringVar(value=self.interface_var.get())
+        ttk.OptionMenu(
+            self.config_frame,
+            self.config_interface_var,
+            self.config_interface_var.get(),
+            *self.get_interfaces(),
+        ).grid(row=row, column=1, sticky="ew", pady=2)
+        row += 1
+
+        self.config_mode = tk.StringVar(value="dhcp")
+        ttk.Radiobutton(
+            self.config_frame,
+            text="DHCP",
+            variable=self.config_mode,
+            value="dhcp",
+            command=self.toggle_static_fields,
+        ).grid(row=row, column=0, sticky="w")
+        ttk.Radiobutton(
+            self.config_frame,
+            text="Est\u00e1tica",
+            variable=self.config_mode,
+            value="static",
+            command=self.toggle_static_fields,
+        ).grid(row=row, column=1, sticky="w")
+        row += 1
+
+        ttk.Label(self.config_frame, text="IP:").grid(row=row, column=0, sticky="w", pady=2)
+        self.ip_entry = ttk.Entry(self.config_frame)
+        self.ip_entry.grid(row=row, column=1, sticky="ew", pady=2)
+        row += 1
+
+        ttk.Label(self.config_frame, text="M\u00e1scara:").grid(row=row, column=0, sticky="w", pady=2)
+        self.mask_entry = ttk.Entry(self.config_frame)
+        self.mask_entry.grid(row=row, column=1, sticky="ew", pady=2)
+        row += 1
+
+        ttk.Label(self.config_frame, text="Gateway:").grid(row=row, column=0, sticky="w", pady=2)
+        self.gw_entry = ttk.Entry(self.config_frame)
+        self.gw_entry.grid(row=row, column=1, sticky="ew", pady=2)
+        row += 1
+
+        ttk.Label(self.config_frame, text="DNS:").grid(row=row, column=0, sticky="w", pady=2)
+        self.dns_entry = ttk.Entry(self.config_frame)
+        self.dns_entry.grid(row=row, column=1, sticky="ew", pady=2)
+        row += 1
+
+        self.apply_config_button = ttk.Button(
+            self.config_frame, text="Aplicar", command=self.apply_network_config
+        )
+        self.apply_config_button.grid(row=row, column=0, columnspan=2, pady=5)
+        row += 1
+
+        self.config_output = tk.Text(self.config_frame, height=6)
+        self.config_output.grid(row=row, column=0, columnspan=2, sticky="nsew", padx=5, pady=5)
+
+        self.config_frame.columnconfigure(1, weight=1)
+        self.toggle_static_fields()
 
         # Update widgets in a separate tab
         ttk.Label(
@@ -256,6 +332,73 @@ class NetworkMonitor(tk.Tk):
                     self.port_text.insert(tk.END, f"{port}/{proto}: {state}\n")
         except Exception as exc:  # pragma: no cover - runtime issues
             self.port_text.insert(tk.END, f"Error: {exc}\n")
+
+    # ------------------------------------------------------------------
+    # Ping functions
+    def run_ping(self):
+        host = self.ping_entry.get().strip()
+        self.ping_text.delete("1.0", tk.END)
+        if not host:
+            self.ping_text.insert(tk.END, "Introduce un host\n")
+            return
+        threading.Thread(target=self._ping_thread, args=(host,), daemon=True).start()
+
+    def _ping_thread(self, host):
+        try:
+            proc = subprocess.run([
+                "ping",
+                "-c",
+                "4",
+                host,
+            ], capture_output=True, text=True)
+            output = proc.stdout or proc.stderr
+        except Exception as exc:  # pragma: no cover - runtime issues
+            output = str(exc)
+        self.ping_text.insert(tk.END, output)
+
+    # ------------------------------------------------------------------
+    # Network configuration functions
+    def toggle_static_fields(self):
+        state = "normal" if self.config_mode.get() == "static" else "disabled"
+        for widget in (self.ip_entry, self.mask_entry, self.gw_entry, self.dns_entry):
+            widget.configure(state=state)
+
+    def apply_network_config(self):
+        threading.Thread(target=self._apply_config_thread, daemon=True).start()
+
+    def _apply_config_thread(self):
+        iface = self.config_interface_var.get()
+        self.config_output.delete("1.0", tk.END)
+        cmds = []
+        if self.config_mode.get() == "dhcp":
+            cmds = [["sudo", "dhclient", "-r", iface], ["sudo", "dhclient", iface]]
+        else:
+            ip_addr = self.ip_entry.get().strip()
+            mask = self.mask_entry.get().strip()
+            gw = self.gw_entry.get().strip()
+            dns = self.dns_entry.get().strip()
+            if not ip_addr or not mask or not gw:
+                self.config_output.insert(tk.END, "Debes indicar IP, m\u00e1scara y gateway\n")
+                return
+            cmds = [
+                ["sudo", "ip", "addr", "flush", "dev", iface],
+                ["sudo", "ip", "addr", "add", f"{ip_addr}/{mask}", "dev", iface],
+                ["sudo", "ip", "route", "add", "default", "via", gw],
+            ]
+            if dns:
+                cmds.append([
+                    "sudo",
+                    "sh",
+                    "-c",
+                    f"echo nameserver {dns} > /etc/resolv.conf",
+                ])
+        for cmd in cmds:
+            try:
+                proc = subprocess.run(cmd, capture_output=True, text=True)
+                self.config_output.insert(tk.END, proc.stdout + proc.stderr)
+            except Exception as exc:  # pragma: no cover - runtime issues
+                self.config_output.insert(tk.END, str(exc) + "\n")
+        self.update_info()
 
     def update_app(self):
         """Perform git pull, reinstall dependencies and restart."""

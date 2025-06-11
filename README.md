@@ -10,13 +10,15 @@ PocketEthernet.
 
 - `main.py`: aplicación principal. Muestra IP, gateway, DNS, velocidad de
   enlace, VLAN detectada y estado PoE. Permite escanear la red y los puertos de
-  los hosts encontrados mediante `nmap`.
+  los hosts encontrados mediante `nmap`. Incluye una pestaña para hacer `ping`
+  a cualquier host y otra para configurar la red de la interfaz seleccionada
+  (DHCP o IP estática).
 - `install.sh`: script para instalar las dependencias necesarias en Raspberry Pi OS o sistemas basados en Debian (incluye `pyroute2` para detectar VLAN).
 
 ## Uso
 
 1. Ejecuta `./install.sh` para instalar Python y todas las dependencias
-   necesarias (incluye `nmap`, `arp-scan` y `pyroute2`).
+   necesarias (incluye `nmap`, `arp-scan`, `iputils-ping` e `iproute2`).
 2. Inicia la interfaz con:
    ```bash
    sudo python3 main.py
