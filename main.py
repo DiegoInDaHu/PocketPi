@@ -1,4 +1,6 @@
 import os
+import sys
+import subprocess
 import threading
 import time
 import tkinter as tk
@@ -51,8 +53,10 @@ class NetworkMonitor(tk.Tk):
         notebook = ttk.Notebook(self)
         self.info_frame = ttk.Frame(notebook)
         self.scan_frame = ttk.Frame(notebook)
+        self.update_frame = ttk.Frame(notebook)
         notebook.add(self.info_frame, text="Informaci\u00f3n")
         notebook.add(self.scan_frame, text="Escaneo")
+        notebook.add(self.update_frame, text="Actualizaci\u00f3n")
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
         # Network info widgets
@@ -105,6 +109,18 @@ class NetworkMonitor(tk.Tk):
 
         self.port_text = tk.Text(self.scan_frame, height=6)
         self.port_text.pack(fill="both", expand=True, padx=5, pady=5)
+
+        # Update widgets in a separate tab
+        ttk.Label(
+            self.update_frame,
+            text="Comprobar y aplicar actualizaciones"
+        ).pack(pady=10)
+        self.update_button = ttk.Button(
+            self.update_frame,
+            text="Actualizar aplicaci\u00f3n",
+            command=self.update_app,
+        )
+        self.update_button.pack(pady=5)
 
     # ------------------------------------------------------------------
     # Data acquisition
@@ -213,6 +229,29 @@ class NetworkMonitor(tk.Tk):
                     self.port_text.insert(tk.END, f"{port}/{proto}: {state}\n")
         except Exception as exc:  # pragma: no cover - runtime issues
             self.port_text.insert(tk.END, f"Error: {exc}\n")
+
+    def update_app(self):
+        """Perform git pull, reinstall dependencies and restart."""
+        if not messagebox.askyesno(
+            "Actualizar",
+            "\u00bfDeseas buscar e instalar actualizaciones?",
+        ):
+            return
+
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        try:
+            subprocess.run(["git", "pull"], cwd=script_dir, check=True)
+            subprocess.run(["bash", "install.sh"], cwd=script_dir, check=True)
+            messagebox.showinfo(
+                "Actualizar", "Actualizaci\u00f3n completada. Se reiniciar\u00e1 la aplicaci\u00f3n"
+            )
+        except subprocess.CalledProcessError as exc:  # pragma: no cover - runtime
+            messagebox.showerror(
+                "Actualizar", f"Error al actualizar: {exc}"
+            )
+            return
+
+        os.execv(sys.executable, [sys.executable, os.path.abspath(__file__)])
 
 
 def main():
