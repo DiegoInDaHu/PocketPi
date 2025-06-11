@@ -409,6 +409,37 @@ class NetworkMonitor(tk.Tk):
             return
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
+        git_dir = os.path.join(script_dir, ".git")
+
+        if not os.path.isdir(git_dir):
+            messagebox.showerror(
+                "Actualizar",
+                "No se encontró repositorio Git en el directorio de la aplicación",
+            )
+            return
+
+        try:
+            remotes = subprocess.run(
+                ["git", "remote"],
+                cwd=script_dir,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+        except subprocess.CalledProcessError as exc:
+            messagebox.showerror(
+                "Actualizar",
+                f"Error al comprobar remotos: {exc}",
+            )
+            return
+
+        if not remotes:
+            messagebox.showerror(
+                "Actualizar",
+                "El repositorio no tiene un remoto configurado",
+            )
+            return
+
         try:
             subprocess.run(
                 ["sudo", "git", "pull"],
