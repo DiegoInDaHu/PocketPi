@@ -139,6 +139,7 @@ class NetworkMonitor(tk.Tk):
             self.config_interface_var,
             self.config_interface_var.get(),
             *self.get_interfaces(),
+            command=lambda _=None: self.load_network_config(),
         ).grid(row=row, column=1, sticky="ew", pady=2)
         row += 1
 
@@ -190,6 +191,7 @@ class NetworkMonitor(tk.Tk):
 
         self.config_frame.columnconfigure(1, weight=1)
         self.toggle_static_fields()
+        self.load_network_config()
 
         # Update widgets in a separate tab
         ttk.Label(
@@ -363,6 +365,71 @@ class NetworkMonitor(tk.Tk):
         for widget in (self.ip_entry, self.mask_entry, self.gw_entry, self.dns_entry):
             widget.configure(state=state)
 
+    def load_network_config(self):
+        """Detect current network configuration for the selected interface."""
+        conf = self.detect_network_config(self.config_interface_var.get())
+        self.config_mode.set(conf["mode"])
+
+        for entry in (self.ip_entry, self.mask_entry, self.gw_entry, self.dns_entry):
+            entry.delete(0, tk.END)
+
+        if conf["mode"] == "static":
+            if conf["ip"]:
+                self.ip_entry.insert(0, conf["ip"])
+            if conf["mask"]:
+                self.mask_entry.insert(0, conf["mask"])
+            if conf["gw"]:
+                self.gw_entry.insert(0, conf["gw"])
+            if conf["dns"]:
+                self.dns_entry.insert(0, conf["dns"])
+        self.toggle_static_fields()
+
+    @staticmethod
+    def detect_network_config(interface):
+        """Return current config from /etc/dhcpcd.conf for an interface."""
+        config = {"mode": "dhcp", "ip": "", "mask": "", "gw": "", "dns": ""}
+        path = "/etc/dhcpcd.conf"
+        if os.path.exists(path):
+            try:
+                with open(path) as f:
+                    lines = [
+                        l.strip()
+                        for l in f
+                        if l.strip() and not l.strip().startswith("#")
+                    ]
+                for i, line in enumerate(lines):
+                    if line.startswith("interface ") and line.split()[1] == interface:
+                        for sub in lines[i + 1 :]:
+                            if sub.startswith("interface "):
+                                break
+                            if sub.startswith("static ip_address"):
+                                val = sub.split("=", 1)[1].strip()
+                                if "/" in val:
+                                    ip_part, mask = val.split("/", 1)
+                                else:
+                                    ip_part, mask = val, ""
+                                config["ip"] = ip_part
+                                if mask:
+                                    if "." in mask:
+                                        try:
+                                            import ipaddress
+
+                                            mask = str(
+                                                ipaddress.ip_network("0.0.0.0/" + mask).prefixlen
+                                            )
+                                        except Exception:
+                                            pass
+                                    config["mask"] = mask
+                                config["mode"] = "static"
+                            elif sub.startswith("static routers"):
+                                config["gw"] = sub.split("=", 1)[1].strip()
+                            elif sub.startswith("static domain_name_servers"):
+                                config["dns"] = sub.split("=", 1)[1].strip()
+                        break
+            except Exception:
+                pass
+        return config
+
     def apply_network_config(self):
         threading.Thread(target=self._apply_config_thread, daemon=True).start()
 
@@ -399,6 +466,7 @@ class NetworkMonitor(tk.Tk):
             except Exception as exc:  # pragma: no cover - runtime issues
                 self.config_output.insert(tk.END, str(exc) + "\n")
         self.update_info()
+        self.load_network_config()
 
     def update_app(self):
         """Perform git pull, reinstall dependencies and restart."""
