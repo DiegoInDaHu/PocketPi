@@ -410,15 +410,27 @@ class NetworkMonitor(tk.Tk):
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
         try:
-            subprocess.run(["sudo", "git", "pull"], cwd=script_dir, check=True)
-            subprocess.run(["sudo", "bash", "install.sh"], cwd=script_dir, check=True)
+            subprocess.run(
+                ["sudo", "git", "pull"],
+                cwd=script_dir,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            subprocess.run(
+                ["sudo", "bash", "install.sh"],
+                cwd=script_dir,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
             messagebox.showinfo(
-                "Actualizar", "Actualizaci\u00f3n completada. Se reiniciar\u00e1 la aplicaci\u00f3n"
+                "Actualizar",
+                "Actualizaci\u00f3n completada. Se reiniciar\u00e1 la aplicaci\u00f3n",
             )
         except subprocess.CalledProcessError as exc:  # pragma: no cover - runtime
-            messagebox.showerror(
-                "Actualizar", f"Error al actualizar: {exc}"
-            )
+            output = exc.stderr or exc.stdout or str(exc)
+            messagebox.showerror("Actualizar", f"Error al actualizar:\n{output}")
             return
 
         os.execv(sys.executable, [sys.executable, os.path.abspath(__file__)])
