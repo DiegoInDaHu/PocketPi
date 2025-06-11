@@ -14,6 +14,11 @@ try:
 except ImportError:  # pragma: no cover - optional dependency
     nmap = None
 
+try:
+    from pyroute2 import IPRoute
+except ImportError:  # pragma: no cover - optional dependency
+    IPRoute = None
+
 from scapy.all import ARP, Ether, srp
 
 
@@ -178,9 +183,31 @@ class NetworkMonitor(tk.Tk):
 
     @staticmethod
     def get_vlan(interface):
+        """Return VLAN ID of the interface or N/A."""
+        if IPRoute is not None:
+            try:
+                with IPRoute() as ipr:
+                    idx = ipr.link_lookup(ifname=interface)
+                    if idx:
+                        info = ipr.get_links(idx[0])[0]
+                        linkinfo = info.get_attr("IFLA_LINKINFO")
+                        if linkinfo and linkinfo.get_attr("IFLA_INFO_KIND") == "vlan":
+                            data = linkinfo.get_attr("IFLA_INFO_DATA")
+                            if data:
+                                vlan_id = data.get_attr("IFLA_VLAN_ID")
+                                return str(vlan_id)
+            except Exception:
+                pass
+
         path = f"/proc/net/vlan/{interface}"
         if os.path.exists(path):
-            return interface
+            try:
+                with open(path) as f:
+                    for line in f:
+                        if line.strip().startswith("VID:"):
+                            return line.split()[1]
+            except Exception:
+                return interface
         if "." in interface:
             return interface.split(".")[1]
         return "N/A"
@@ -240,8 +267,8 @@ class NetworkMonitor(tk.Tk):
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
         try:
-            subprocess.run(["git", "pull"], cwd=script_dir, check=True)
-            subprocess.run(["bash", "install.sh"], cwd=script_dir, check=True)
+            subprocess.run(["sudo", "git", "pull"], cwd=script_dir, check=True)
+            subprocess.run(["sudo", "bash", "install.sh"], cwd=script_dir, check=True)
             messagebox.showinfo(
                 "Actualizar", "Actualizaci\u00f3n completada. Se reiniciar\u00e1 la aplicaci\u00f3n"
             )
