@@ -45,6 +45,7 @@ class NetworkMonitor(tk.Tk):
         # Track animations for buttons
         self._spinners = {}
 
+        self.update_available = self.check_updates()
         self.create_widgets()
 
         # Thread to refresh network data periodically
@@ -69,7 +70,8 @@ class NetworkMonitor(tk.Tk):
         notebook.add(self.scan_frame, text="Escaneo")
         notebook.add(self.ping_frame, text="Ping")
         notebook.add(self.config_frame, text="Configuraci\u00f3n")
-        notebook.add(self.update_frame, text="Actualizaci\u00f3n")
+        if self.update_available:
+            notebook.add(self.update_frame, text="Actualizaci\u00f3n")
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
         # Network info widgets
@@ -110,14 +112,13 @@ class NetworkMonitor(tk.Tk):
 
         ttk.Label(self.info_frame, text="LLDP/CDP:").grid(row=row, column=0, sticky="w", pady=2)
         ttk.Label(self.info_frame, textvariable=self.lldp_var).grid(row=row, column=1, sticky="w", pady=2)
-        row += 1
-
         self.lldp_button = ttk.Button(
             self.info_frame,
-            text="Detectar vecino",
+            text="Analizar CDP/LLDP",
             command=self.detect_neighbors,
         )
-        self.lldp_button.grid(row=row, column=0, columnspan=2, pady=5)
+        self.lldp_button.grid(row=row, column=2, sticky="w", padx=5)
+        row += 1
 
         # Scan widgets
         self.scan_button = ttk.Button(self.scan_frame, text="Escanear red", command=self.scan_network)
@@ -310,6 +311,55 @@ class NetworkMonitor(tk.Tk):
     def detect_poe():
         # Placeholder for PoE detection logic
         return "N/A"
+
+    @staticmethod
+    def check_updates():
+        """Return True if there are commits to pull from origin."""
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        git_dir = os.path.join(script_dir, ".git")
+        if not os.path.isdir(git_dir):
+            return False
+        try:
+            remotes = subprocess.run(
+                ["git", "remote"],
+                cwd=script_dir,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+            if not remotes:
+                return False
+            subprocess.run(
+                ["git", "fetch", "--quiet"],
+                cwd=script_dir,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            branch = subprocess.run(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                cwd=script_dir,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+            local = subprocess.run(
+                ["git", "rev-parse", branch],
+                cwd=script_dir,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+            remote = subprocess.run(
+                ["git", "rev-parse", f"origin/{branch}"],
+                cwd=script_dir,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+            return local != remote
+        except subprocess.CalledProcessError:
+            return False
 
     # ------------------------------------------------------------------
     # Button animation helpers
@@ -642,18 +692,26 @@ class NetworkMonitor(tk.Tk):
         """Perform git pull, reinstall dependencies and restart."""
         if not messagebox.askyesno(
             "Actualizar",
-            "\u00bfDeseas buscar e instalar actualizaciones?",
+            "¿Deseas buscar e instalar actualizaciones?",
         ):
             return
 
+        threading.Thread(target=self._update_app_thread, daemon=True).start()
+
+    def _update_app_thread(self):
+        self.start_button_animation(self.update_button)
         script_dir = os.path.dirname(os.path.abspath(__file__))
         git_dir = os.path.join(script_dir, ".git")
 
         if not os.path.isdir(git_dir):
-            messagebox.showerror(
-                "Actualizar",
-                "No se encontró repositorio Git en el directorio de la aplicación",
+            self.after(
+                0,
+                lambda: messagebox.showerror(
+                    "Actualizar",
+                    "No se encontró repositorio Git en el directorio de la aplicación",
+                ),
             )
+            self.stop_button_animation(self.update_button)
             return
 
         try:
@@ -665,17 +723,13 @@ class NetworkMonitor(tk.Tk):
                 check=True,
             ).stdout.strip()
         except subprocess.CalledProcessError as exc:
-            messagebox.showerror(
-                "Actualizar",
-                f"Error al comprobar remotos: {exc}",
-            )
+            self.after(0, lambda: messagebox.showerror("Actualizar", f"Error al comprobar remotos: {exc}"))
+            self.stop_button_animation(self.update_button)
             return
 
         if not remotes:
-            messagebox.showerror(
-                "Actualizar",
-                "El repositorio no tiene un remoto configurado",
-            )
+            self.after(0, lambda: messagebox.showerror("Actualizar", "El repositorio no tiene un remoto configurado"))
+            self.stop_button_animation(self.update_button)
             return
 
         try:
@@ -693,16 +747,24 @@ class NetworkMonitor(tk.Tk):
                 capture_output=True,
                 text=True,
             )
-            messagebox.showinfo(
-                "Actualizar",
-                "Actualizaci\u00f3n completada. Se reiniciar\u00e1 la aplicaci\u00f3n",
-            )
-        except subprocess.CalledProcessError as exc:  # pragma: no cover - runtime
+        except subprocess.CalledProcessError as exc:
             output = exc.stderr or exc.stdout or str(exc)
-            messagebox.showerror("Actualizar", f"Error al actualizar:\n{output}")
+            self.after(0, lambda: messagebox.showerror("Actualizar", f"Error al actualizar:\n{output}"))
+            self.stop_button_animation(self.update_button)
             return
 
-        os.execv(sys.executable, [sys.executable, os.path.abspath(__file__)])
+        self.stop_button_animation(self.update_button)
+        self.after(
+            0,
+            lambda: (
+                messagebox.showinfo(
+                    "Actualizar",
+                    "Actualización completada. Se reiniciará la aplicación",
+                ),
+                os.execv(sys.executable, [sys.executable, os.path.abspath(__file__)]),
+            ),
+        )
+
 
 
 def main():
