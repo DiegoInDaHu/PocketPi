@@ -40,6 +40,7 @@ class NetworkMonitor(tk.Tk):
         self.speed_var = tk.StringVar()
         self.vlan_var = tk.StringVar()
         self.poe_var = tk.StringVar()
+        self.lldp_var = tk.StringVar(value="N/A")
 
         # Track animations for buttons
         self._spinners = {}
@@ -105,6 +106,18 @@ class NetworkMonitor(tk.Tk):
 
         ttk.Label(self.info_frame, text="PoE:").grid(row=row, column=0, sticky="w", pady=2)
         ttk.Label(self.info_frame, textvariable=self.poe_var).grid(row=row, column=1, sticky="w", pady=2)
+        row += 1
+
+        ttk.Label(self.info_frame, text="LLDP/CDP:").grid(row=row, column=0, sticky="w", pady=2)
+        ttk.Label(self.info_frame, textvariable=self.lldp_var).grid(row=row, column=1, sticky="w", pady=2)
+        row += 1
+
+        self.lldp_button = ttk.Button(
+            self.info_frame,
+            text="Detectar vecino",
+            command=self.detect_neighbors,
+        )
+        self.lldp_button.grid(row=row, column=0, columnspan=2, pady=5)
 
         # Scan widgets
         self.scan_button = ttk.Button(self.scan_frame, text="Escanear red", command=self.scan_network)
@@ -372,6 +385,74 @@ class NetworkMonitor(tk.Tk):
                     self.port_text.insert(tk.END, f"{port}/{proto}: {state}\n")
         except Exception as exc:  # pragma: no cover - runtime issues
             self.port_text.insert(tk.END, f"Error: {exc}\n")
+
+    def detect_neighbors(self):
+        """Detect LLDP or CDP frames on the selected interface."""
+        threading.Thread(target=self._detect_neighbors_thread, daemon=True).start()
+
+    def _detect_neighbors_thread(self):
+        self.start_button_animation(self.lldp_button)
+        iface = self.interface_var.get()
+        result = self.sniff_neighbors(iface)
+        self.lldp_var.set(result)
+        self.stop_button_animation(self.lldp_button)
+
+    @staticmethod
+    def sniff_neighbors(iface):
+        try:
+            from scapy.all import sniff
+            from scapy.contrib import lldp, cdp
+        except Exception:
+            return "N/A"
+
+        def lfilter(pkt):
+            return pkt.haslayer(lldp.LLDPDU) or pkt.haslayer(cdp.CDPMsg)
+
+        try:
+            pkts = sniff(iface=iface, timeout=5, count=1, lfilter=lfilter)
+        except PermissionError:
+            return "Permiso denegado"
+        except Exception:
+            return "Error"
+
+        if not pkts:
+            return "No detectado"
+        pkt = pkts[0]
+
+        if pkt.haslayer(lldp.LLDPDU):
+            name = None
+            port = None
+            for tlv in pkt[lldp.LLDPDU].tlv_list:
+                if isinstance(tlv, lldp.LLDPDUSystemName):
+                    val = tlv.system_name
+                    name = val.decode() if isinstance(val, bytes) else val
+                elif isinstance(tlv, lldp.LLDPDUPortID):
+                    val = tlv.id
+                    port = val.decode() if isinstance(val, bytes) else str(val)
+            parts = ["LLDP"]
+            if name:
+                parts.append(name)
+            if port:
+                parts.append(port)
+            return " ".join(parts)
+
+        if pkt.haslayer(cdp.CDPMsg):
+            device_layer = pkt.getlayer(cdp.CDPMsgDeviceID)
+            port_layer = pkt.getlayer(cdp.CDPMsgPortID)
+            device = device_layer.val if device_layer else None
+            port = port_layer.iface if port_layer else None
+            if isinstance(device, bytes):
+                device = device.decode(errors="ignore")
+            if isinstance(port, bytes):
+                port = port.decode(errors="ignore")
+            parts = ["CDP"]
+            if device:
+                parts.append(device)
+            if port:
+                parts.append(port)
+            return " ".join(parts)
+
+        return "N/A"
 
     # ------------------------------------------------------------------
     # Ping functions
