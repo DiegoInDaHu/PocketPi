@@ -32,9 +32,10 @@ from scapy.all import ARP, Ether, srp
 class NumericKeypad(tk.Toplevel):
     """Simple on-screen numeric keypad."""
 
-    def __init__(self, master, entry):
+    def __init__(self, master, entry=None):
         super().__init__(master)
         self.entry = entry
+        self.withdraw()
         self.title("Teclado")
         self.resizable(False, False)
         self.attributes("-topmost", True)
@@ -63,8 +64,8 @@ class NumericKeypad(tk.Toplevel):
         self.transient(master)
 
     def close(self):
-        """Close keypad and remove focus from entry widgets."""
-        self.destroy()
+        """Hide keypad and return focus to the main window."""
+        self.withdraw()
         self.master.focus_set()
 
     def _on_press(self, value):
@@ -388,20 +389,18 @@ class NetworkMonitor(tk.Tk):
 
     def show_numeric_keypad(self, widget, _event=None):
         """Display on-screen keypad for the focused entry."""
-        if (
-            self.keypad is not None
-            and self.keypad.winfo_exists()
-            and getattr(self.keypad, "entry", None) == widget
-        ):
-            return
-        if self.keypad is not None and self.keypad.winfo_exists():
-            self.keypad.destroy()
-        self.keypad = NumericKeypad(self, widget)
+        if self.keypad is None or not self.keypad.winfo_exists():
+            self.keypad = NumericKeypad(self, widget)
+        else:
+            self.keypad.entry = widget
+        self.keypad.deiconify()
+        self.keypad.lift()
+        
 
     def hide_numeric_keypad(self, _event=None):
         """Hide the on-screen keypad if visible."""
         if self.keypad is not None and self.keypad.winfo_exists():
-            self.keypad.destroy()
+            self.keypad.withdraw()
         self.focus_set()
 
     def _belongs_to_combobox(self, widget):
