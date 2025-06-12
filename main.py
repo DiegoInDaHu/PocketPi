@@ -26,7 +26,8 @@ try:
 except ImportError:  # pragma: no cover - optional dependency
     IPRoute = None
 
-from scapy.all import ARP, Ether, srp
+from scapy.all import ARP, Ether, srp, srp1
+import ipaddress
 
 
 
@@ -188,19 +189,33 @@ class NetworkMonitor(tk.Tk):
             textvariable=self.vlan_id_var,
             validate="key",
             validatecommand=vcmd,
-            width=8,
+            width=5,
         )
         self.vlan_entry_scan.grid(row=0, column=1, sticky="w")
 
-        self.scan_button = ttk.Button(
+        self.start_scan_button = ttk.Button(
             scan_opts,
-            text="Escanear red",
+            text="\u25B6",  # play icon
             command=self.scan_network,
-            width=self.button_width,
+            width=3,
         )
+        self.start_scan_button.grid(row=0, column=2, sticky="w", padx=(10, 0))
 
-        self.scan_button.grid(row=0, column=2, sticky="e", padx=(10, 0))
-        scan_opts.columnconfigure(2, weight=1)
+        self.stop_scan_button = ttk.Button(
+            scan_opts,
+            text="\u25A0",  # stop icon
+            command=self.stop_scan,
+            width=3,
+            state="disabled",
+        )
+        self.stop_scan_button.grid(row=0, column=3, sticky="w")
+        scan_opts.columnconfigure(4, weight=1)
+
+        self.scan_status_var = tk.StringVar()
+        self.scan_status_label = ttk.Label(
+            scan_opts, textvariable=self.scan_status_var, style="Small.TLabel"
+        )
+        self.scan_status_label.grid(row=1, column=0, columnspan=4, sticky="w", pady=(5, 0))
 
 
         columns = ("ip", "mac")
@@ -588,35 +603,56 @@ class NetworkMonitor(tk.Tk):
     # Scanning functions
     def scan_network(self):
         """Scan the local network using ARP requests."""
+        if getattr(self, "scanning", False):
+            return
+        self.scanning = True
+        self.start_scan_button.config(state="disabled")
+        self.stop_scan_button.config(state="normal")
         threading.Thread(target=self._scan_network_thread, daemon=True).start()
 
+    def stop_scan(self):
+        self.scanning = False
+
     def _scan_network_thread(self):
-        self.start_button_animation(self.scan_button)
+        self.scan_status_var.set("")
         self.host_tree.delete(*self.host_tree.get_children())
         iface = self.interface_var.get()
         vlan = self.vlan_id_var.get().strip()
         if vlan:
             vlan_iface = self.ensure_vlan_interface(iface, vlan)
             if not vlan_iface:
-                self.stop_button_animation(self.scan_button)
+                self.start_scan_button.config(state="normal")
+                self.stop_scan_button.config(state="disabled")
+                self.scanning = False
                 return
             iface = vlan_iface
             messagebox.showinfo("VLAN", f"Escaneando red en VLAN {vlan}")
-        ip = f"{self.get_ip(iface)}/24"
-        ether = Ether(dst="ff:ff:ff:ff:ff:ff")
-        arp = ARP(pdst=ip)
-        try:
-            ans, _ = srp(ether / arp, timeout=2, iface=iface, verbose=0)
-        except PermissionError:
-            messagebox.showerror(
-                "Permiso denegado",
-                "Necesitas privilegios de superusuario para escanear la red",
-            )
-            self.stop_button_animation(self.scan_button)
+        ip_addr = self.get_ip(iface)
+        if ip_addr == "Sin conectar":
+            self.scan_status_var.set("Sin conectar")
+            self.start_scan_button.config(state="normal")
+            self.stop_scan_button.config(state="disabled")
+            self.scanning = False
             return
-        for _, rcv in ans:
-            self.host_tree.insert("", "end", values=(rcv.psrc, rcv.hwsrc))
-        self.stop_button_animation(self.scan_button)
+        net = ipaddress.ip_network(f"{ip_addr}/24", strict=False)
+        ether = Ether(dst="ff:ff:ff:ff:ff:ff")
+        for addr in net.hosts():
+            if not self.scanning:
+                break
+            self.scan_status_var.set(f"Escaneando {addr}")
+            arp = ARP(pdst=str(addr))
+            try:
+                ans = srp1(ether / arp, timeout=0.5, iface=iface, verbose=0)
+            except PermissionError:
+                self.scan_status_var.set("Permiso denegado")
+                self.scanning = False
+                break
+            if ans:
+                self.host_tree.insert("", "end", values=(ans.psrc, ans.hwsrc))
+        self.scan_status_var.set("Listo" if self.scanning else "Cancelado")
+        self.start_scan_button.config(state="normal")
+        self.stop_scan_button.config(state="disabled")
+        self.scanning = False
 
     def port_scan(self):
         """Scan common ports on the selected host using nmap."""
