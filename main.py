@@ -82,6 +82,13 @@ class NetworkMonitor(tk.Tk):
         self.style.configure("TLabelframe.Label", font=("Arial", 16, "bold"))
         self.style.configure("Small.TLabel", font=("Arial", 12))
 
+        # Darker tone for disabled entry fields
+        self.style.map(
+            "TEntry",
+            foreground=[("disabled", "#555")],
+            fieldbackground=[("disabled", "#d9d9d9")],
+        )
+
         self.style.configure("Local.TFrame", background="#e6f4ff")
         self.style.configure("Local.TLabel", background="#e6f4ff")
 
@@ -269,12 +276,16 @@ class NetworkMonitor(tk.Tk):
         self.ping_text.pack(fill="both", expand=True, padx=5, pady=5)
 
         # External tests widgets
-        ttk.Label(self.external_frame, text="Host o dominio:").pack(pady=5)
-        self.test_host_entry = ttk.Entry(self.external_frame)
-        self.test_host_entry.pack(fill="x", padx=5)
-        ttk.Label(self.external_frame, text="Puerto:").pack(pady=5)
-        self.test_port_entry = ttk.Entry(self.external_frame)
-        self.test_port_entry.pack(fill="x", padx=5)
+        ext_opts = ttk.Frame(self.external_frame, padding=(0, 5))
+        ext_opts.pack(fill="x", pady=10)
+        ttk.Label(ext_opts, text="Host o dominio:").grid(row=0, column=0, sticky="w", padx=(0, 5))
+        self.test_host_entry = ttk.Entry(ext_opts)
+        self.test_host_entry.grid(row=0, column=1, sticky="ew", padx=(0, 5))
+        ttk.Label(ext_opts, text="Puerto:").grid(row=0, column=2, sticky="w", padx=(0, 5))
+        self.test_port_entry = ttk.Entry(ext_opts, width=6)
+        self.test_port_entry.grid(row=0, column=3, sticky="ew")
+        ext_opts.columnconfigure(1, weight=3)
+        ext_opts.columnconfigure(3, weight=1)
         self.test_button = ttk.Button(
             self.external_frame,
             text="Probar conexi\u00f3n",
