@@ -10,14 +10,17 @@ PocketEthernet.
 
 - `main.py`: aplicación principal. Muestra IP, gateway, DNS, velocidad de
   enlace, VLAN detectada, estado PoE y detecta vecinos CDP/LLDP. Permite escanear la red y los puertos de
-  los hosts encontrados mediante `nmap`. Incluye una pestaña para hacer `ping`
+- los hosts encontrados mediante `nmap`. Incluye una pestaña para hacer `ping`
   a cualquier host, otra de **pruebas externas** que verifica la conectividad de
   un puerto TCP y otra para configurar la red de la interfaz seleccionada. La
   IP pública aparece directamente en la pestaña principal sin necesidad de
   pulsar ningún botón
   (DHCP o IP estática). La configuración se guarda en `/etc/dhcpcd.conf` para
   que persista tras reiniciar.
-- `install.sh`: script para instalar las dependencias necesarias en Raspberry Pi OS o sistemas basados en Debian (incluye `pyroute2` para detectar VLAN).
+  Además, las pestañas de escaneo y ping permiten introducir un ID de VLAN.
+  Si se especifica, las pruebas se realizan usando la interfaz etiquetada
+  correspondiente (por ejemplo `eth0.10`).
+- `install.sh`: script para instalar las dependencias necesarias en Raspberry Pi OS o sistemas basados en Debian. Emplea el Python obtenido con `which python3` para que las bibliotecas funcionen al ejecutar la aplicación con privilegios (incluye `pyroute2` para detectar VLAN).
 
 ## Uso
 
@@ -27,9 +30,9 @@ PocketEthernet.
    `scapy`, `python-nmap` y `pyroute2`.
 2. Inicia la interfaz con:
    ```bash
-   sudo python3 main.py
+   sudo $(which python3) main.py
    ```
-   Se recomienda ejecutar como superusuario para el escaneo de red.
+   Se recomienda ejecutar como superusuario para el escaneo de red. Si no se dispone de un entorno gráfico, el programa finalizará mostrando un mensaje de error.
 
 3. Al iniciar la aplicación se comprueba si existen nuevas versiones del código. Si hay una actualización disponible aparecerá un cuadro de diálogo que permite instalarla o cancelarla. El proceso ejecuta `git pull --ff-only` e `install.sh` con `sudo` para aplicar las actualizaciones sin crear commits de fusión.
 
