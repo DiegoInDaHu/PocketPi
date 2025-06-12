@@ -30,6 +30,7 @@ PocketEthernet.
 
 3. En la pesta\u00f1a **Actualizaci\u00f3n** puedes comprobar si existen
    nuevas versiones del c\u00f3digo y aplicarlas autom\u00e1ticamente. El proceso
-   ejecuta `git pull` e `install.sh` con `sudo` para aplicar las actualizaciones.
+   ejecuta `git pull --ff-only` e `install.sh` con `sudo` para aplicar las
+   actualizaciones sin crear commits de fusión.
 
 Recuerda que la pestaña de actualización solo funciona si ejecutas la aplicación desde un clon de Git con un remoto accesible.
