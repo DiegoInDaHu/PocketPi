@@ -241,7 +241,8 @@ class NetworkMonitor(tk.Tk):
         self.vlan_entry_scan.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.vlan_entry_scan))
 
         center_scan = ttk.Frame(scan_opts)
-        center_scan.pack(side="left", expand=True)
+        center_scan.pack(side="left", expand=True, fill="x")
+        center_scan.pack_propagate(False)
         self.scan_button = ttk.Button(center_scan, text="Escanear red", command=self.scan_network)
         self.scan_button.pack(pady=5)
 
@@ -280,7 +281,8 @@ class NetworkMonitor(tk.Tk):
         self.vlan_entry_ping.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.vlan_entry_ping))
 
         center_ping = ttk.Frame(ping_opts)
-        center_ping.pack(side="left", expand=True)
+        center_ping.pack(side="left", expand=True, fill="x")
+        center_ping.pack_propagate(False)
         self.ping_button = ttk.Button(center_ping, text="Ping", command=self.run_ping)
         self.ping_button.pack(pady=5)
         self.ping_text = tk.Text(self.ping_frame, height=8, font=("Arial", 16))
@@ -393,7 +395,8 @@ class NetworkMonitor(tk.Tk):
             self.keypad = NumericKeypad(self, widget)
         else:
             self.keypad.entry = widget
-        self.keypad.deiconify()
+        if self.keypad.state() == "withdrawn":
+            self.keypad.deiconify()
         self.keypad.lift()
         
 
@@ -428,7 +431,14 @@ class NetworkMonitor(tk.Tk):
         if widget.winfo_toplevel() == self.keypad:
             return
         if isinstance(widget, (tk.Entry, ttk.Entry)) and not self._belongs_to_combobox(widget):
-            self.show_numeric_keypad(widget)
+            if (
+                self.keypad is None
+                or not self.keypad.winfo_exists()
+                or self.keypad.state() == "withdrawn"
+            ):
+                self.show_numeric_keypad(widget)
+            else:
+                self.keypad.entry = widget
         else:
             self.hide_numeric_keypad()
 
