@@ -86,6 +86,7 @@ class NetworkMonitor(tk.Tk):
         self.title("PocketPi Network Analyzer")
         self.geometry("800x480")
         self.keypad = None
+        self.tab_switching = False
 
         interfaces = self.get_interfaces()
         self.interface_var = tk.StringVar(value=interfaces[0] if interfaces else "")
@@ -242,8 +243,12 @@ class NetworkMonitor(tk.Tk):
 
         center_scan = ttk.Frame(scan_opts)
         center_scan.pack(side="left", expand=True, fill="x")
-        center_scan.pack_propagate(False)
-        self.scan_button = ttk.Button(center_scan, text="Escanear red", command=self.scan_network)
+        self.scan_button = ttk.Button(
+            center_scan,
+            text="Escanear red",
+            command=self.scan_network,
+            width=14,
+        )
         self.scan_button.pack(pady=5)
 
         columns = ("ip", "mac")
@@ -282,8 +287,12 @@ class NetworkMonitor(tk.Tk):
 
         center_ping = ttk.Frame(ping_opts)
         center_ping.pack(side="left", expand=True, fill="x")
-        center_ping.pack_propagate(False)
-        self.ping_button = ttk.Button(center_ping, text="Ping", command=self.run_ping)
+        self.ping_button = ttk.Button(
+            center_ping,
+            text="Ping",
+            command=self.run_ping,
+            width=10,
+        )
         self.ping_button.pack(pady=5)
         self.ping_text = tk.Text(self.ping_frame, height=8, font=("Arial", 16))
         self.ping_text.pack(fill="both", expand=True, padx=5, pady=5)
@@ -427,6 +436,9 @@ class NetworkMonitor(tk.Tk):
             self.hide_numeric_keypad()
 
     def _check_focus_in(self, event):
+        if self.tab_switching:
+            self.tab_switching = False
+            return
         widget = event.widget
         if widget.winfo_toplevel() == self.keypad:
             return
@@ -444,6 +456,7 @@ class NetworkMonitor(tk.Tk):
 
     def on_tab_changed(self, _event=None):
         """Clear focus and hide keypad when switching tabs."""
+        self.tab_switching = True
         self.focus_set()
         self.hide_numeric_keypad()
 
