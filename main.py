@@ -389,13 +389,22 @@ class NetworkMonitor(tk.Tk):
             self.keypad.destroy()
         self.focus_set()
 
+    def _belongs_to_combobox(self, widget):
+        """Return True if widget is part of a ttk.Combobox."""
+        parent = widget
+        while parent is not None:
+            if isinstance(parent, ttk.Combobox):
+                return True
+            parent = getattr(parent, "master", None)
+        return False
+
     def _check_hide_keypad(self, event):
         widget = event.widget
         if self.keypad is None or not self.keypad.winfo_exists():
             return
         if widget.winfo_toplevel() == self.keypad:
             return
-        if isinstance(widget, (tk.Entry, ttk.Entry)):
+        if isinstance(widget, (tk.Entry, ttk.Entry)) and not self._belongs_to_combobox(widget):
             self.show_numeric_keypad(widget)
         else:
             self.hide_numeric_keypad()
@@ -404,7 +413,7 @@ class NetworkMonitor(tk.Tk):
         widget = event.widget
         if widget.winfo_toplevel() == self.keypad:
             return
-        if isinstance(widget, (tk.Entry, ttk.Entry)):
+        if isinstance(widget, (tk.Entry, ttk.Entry)) and not self._belongs_to_combobox(widget):
             self.show_numeric_keypad(widget)
         else:
             self.hide_numeric_keypad()
