@@ -41,6 +41,9 @@ class NetworkMonitor(tk.Tk):
         self.vlan_var = tk.StringVar()
         self.poe_var = tk.StringVar()
 
+        # Track animations for buttons
+        self._spinners = {}
+
         self.create_widgets()
 
         # Thread to refresh network data periodically
@@ -296,9 +299,39 @@ class NetworkMonitor(tk.Tk):
         return "N/A"
 
     # ------------------------------------------------------------------
+    # Button animation helpers
+    def _animate_button(self, button):
+        info = self._spinners.get(button)
+        if not info:
+            return
+        chars = ["|", "/", "-", "\\"]
+        button.config(text=f"{info['base']} {chars[info['phase'] % 4]}")
+        info['phase'] += 1
+        info['id'] = self.after(200, lambda: self._animate_button(button))
+
+    def start_button_animation(self, button):
+        if button in self._spinners:
+            return
+        self._spinners[button] = {"base": button.cget("text"), "phase": 0}
+        button.config(state="disabled")
+        self._animate_button(button)
+
+    def stop_button_animation(self, button):
+        info = self._spinners.pop(button, None)
+        if not info:
+            return
+        if 'id' in info:
+            self.after_cancel(info['id'])
+        button.config(text=info['base'], state="normal")
+
+    # ------------------------------------------------------------------
     # Scanning functions
     def scan_network(self):
         """Scan the local network using ARP requests."""
+        threading.Thread(target=self._scan_network_thread, daemon=True).start()
+
+    def _scan_network_thread(self):
+        self.start_button_animation(self.scan_button)
         self.host_tree.delete(*self.host_tree.get_children())
         iface = self.interface_var.get()
         ip = f"{self.get_ip(iface)}/24"
@@ -307,10 +340,15 @@ class NetworkMonitor(tk.Tk):
         try:
             ans, _ = srp(ether / arp, timeout=2, iface=iface, verbose=0)
         except PermissionError:
-            messagebox.showerror("Permiso denegado", "Necesitas privilegios de superusuario para escanear la red")
+            messagebox.showerror(
+                "Permiso denegado",
+                "Necesitas privilegios de superusuario para escanear la red",
+            )
+            self.stop_button_animation(self.scan_button)
             return
         for _, rcv in ans:
             self.host_tree.insert("", "end", values=(rcv.psrc, rcv.hwsrc))
+        self.stop_button_animation(self.scan_button)
 
     def port_scan(self):
         """Scan common ports on the selected host using nmap."""
@@ -343,6 +381,7 @@ class NetworkMonitor(tk.Tk):
         if not host:
             self.ping_text.insert(tk.END, "Introduce un host\n")
             return
+        self.start_button_animation(self.ping_button)
         threading.Thread(target=self._ping_thread, args=(host,), daemon=True).start()
 
     def _ping_thread(self, host):
@@ -357,6 +396,7 @@ class NetworkMonitor(tk.Tk):
         except Exception as exc:  # pragma: no cover - runtime issues
             output = str(exc)
         self.ping_text.insert(tk.END, output)
+        self.stop_button_animation(self.ping_button)
 
     # ------------------------------------------------------------------
     # Network configuration functions
@@ -469,6 +509,7 @@ class NetworkMonitor(tk.Tk):
         threading.Thread(target=self._apply_config_thread, daemon=True).start()
 
     def _apply_config_thread(self):
+        self.start_button_animation(self.apply_config_button)
         iface = self.config_interface_var.get()
         self.config_output.delete("1.0", tk.END)
         cmds = []
@@ -482,6 +523,7 @@ class NetworkMonitor(tk.Tk):
             dns = self.dns_entry.get().strip()
             if not ip_addr or not mask or not gw:
                 self.config_output.insert(tk.END, "Debes indicar IP, m\u00e1scara y gateway\n")
+                self.stop_button_animation(self.apply_config_button)
                 return
             cmds = [
                 ["sudo", "ip", "addr", "flush", "dev", iface],
@@ -513,6 +555,7 @@ class NetworkMonitor(tk.Tk):
             self.config_output.insert(tk.END, f"Error al guardar configuraci\u00f3n: {err}\n")
         self.update_info()
         self.load_network_config()
+        self.stop_button_animation(self.apply_config_button)
 
     def update_app(self):
         """Perform git pull, reinstall dependencies and restart."""
