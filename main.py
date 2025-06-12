@@ -55,6 +55,7 @@ class NetworkMonitor(tk.Tk):
 
         # Track animations for buttons
         self._spinners = {}
+        self.update_button = None
 
         self.update_available = self.check_updates()
         self.create_widgets()
@@ -843,19 +844,21 @@ class NetworkMonitor(tk.Tk):
         ttk.Button(btn_frame, text="Cancelar", command=popup.destroy).pack(
             side="left", padx=5
         )
-        ttk.Button(
+        self.update_button = ttk.Button(
             btn_frame,
             text="Actualizar",
-            command=lambda: (popup.destroy(), self.update_app()),
-        ).pack(side="left", padx=5)
+            command=lambda: self.update_app(popup),
+        )
+        self.update_button.pack(side="left", padx=5)
         popup.transient(self)
         popup.grab_set()
 
-    def update_app(self):
+    def update_app(self, popup):
         """Perform git pull, reinstall dependencies and restart."""
-        threading.Thread(target=self._update_app_thread, daemon=True).start()
+        self.start_button_animation(self.update_button)
+        threading.Thread(target=self._update_app_thread, args=(popup,), daemon=True).start()
 
-    def _update_app_thread(self):
+    def _update_app_thread(self, popup):
         script_dir = os.path.dirname(os.path.abspath(__file__))
         git_dir = os.path.join(script_dir, ".git")
 
@@ -902,12 +905,15 @@ class NetworkMonitor(tk.Tk):
             )
         except subprocess.CalledProcessError as exc:
             output = exc.stderr or exc.stdout or str(exc)
+            self.after(0, lambda: self.stop_button_animation(self.update_button))
             self.after(0, lambda: messagebox.showerror("Actualizar", f"Error al actualizar:\n{output}"))
             return
 
+        self.after(0, lambda: self.stop_button_animation(self.update_button))
         self.after(
             0,
             lambda: (
+                popup.destroy(),
                 messagebox.showinfo(
                     "Actualizar",
                     "Actualización completada. Se reiniciará la aplicación",
