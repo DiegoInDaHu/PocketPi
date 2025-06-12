@@ -79,16 +79,13 @@ class NetworkMonitor(tk.Tk):
         self.style.configure("TCombobox", font=("Arial", 12))
         self.style.configure("TLabelframe.Label", font=("Arial", 12, "bold"))
 
-        self.style.configure("Local.TLabelframe", background="#e6f4ff")
-        self.style.configure("Local.TLabelframe.Label", background="#e6f4ff")
+        self.style.configure("Local.TFrame", background="#e6f4ff")
         self.style.configure("Local.TLabel", background="#e6f4ff")
 
-        self.style.configure("Internet.TLabelframe", background="#e8ffe6")
-        self.style.configure("Internet.TLabelframe.Label", background="#e8ffe6")
+        self.style.configure("Internet.TFrame", background="#e8ffe6")
         self.style.configure("Internet.TLabel", background="#e8ffe6")
 
-        self.style.configure("Phys.TLabelframe", background="#fff4e6")
-        self.style.configure("Phys.TLabelframe.Label", background="#fff4e6")
+        self.style.configure("Phys.TFrame", background="#fff4e6")
         self.style.configure("Phys.TLabel", background="#fff4e6")
 
         notebook = ttk.Notebook(self)
@@ -107,24 +104,27 @@ class NetworkMonitor(tk.Tk):
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
         # Network info widgets
-        local_frame = ttk.LabelFrame(
-            self.info_frame, text="Red local", style="Local.TLabelframe"
-        )
-        internet_frame = ttk.LabelFrame(
-            self.info_frame, text="Internet", style="Internet.TLabelframe"
-        )
-        phys_frame = ttk.LabelFrame(
-            self.info_frame, text="Conexi\u00f3n f\u00edsica", style="Phys.TLabelframe"
-        )
+        local_frame = ttk.LabelFrame(self.info_frame, text="Red local")
+        internet_frame = ttk.LabelFrame(self.info_frame, text="Internet")
+        phys_frame = ttk.LabelFrame(self.info_frame, text="Conexi\u00f3n f\u00edsica")
         local_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
         internet_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
         phys_frame.grid(row=2, column=0, sticky="nsew", padx=5, pady=5)
         self.info_frame.columnconfigure(0, weight=1)
 
+        local_content = ttk.Frame(local_frame, style="Local.TFrame")
+        internet_content = ttk.Frame(internet_frame, style="Internet.TFrame")
+        phys_content = ttk.Frame(phys_frame, style="Phys.TFrame")
+        for frame in (local_content, internet_content, phys_content):
+            frame.grid(row=0, column=0, sticky="nsew")
+            frame.columnconfigure(1, weight=1)
+        for outer in (local_frame, internet_frame, phys_frame):
+            outer.columnconfigure(0, weight=1)
+
         row = 0
-        ttk.Label(local_frame, text="Interfaz:", style="Local.TLabel").grid(row=row, column=0, sticky="w", pady=2)
+        ttk.Label(local_content, text="Interfaz:", style="Local.TLabel").grid(row=row, column=0, sticky="w", pady=2)
         self.interface_combo = ttk.Combobox(
-            local_frame,
+            local_content,
             textvariable=self.interface_var,
             values=self.get_interfaces(),
             state="readonly",
@@ -133,37 +133,37 @@ class NetworkMonitor(tk.Tk):
         self.interface_combo.bind("<<ComboboxSelected>>", lambda _e: self.update_info())
         row += 1
 
-        ttk.Label(local_frame, text="IP:", style="Local.TLabel").grid(row=row, column=0, sticky="w", pady=2)
-        ttk.Label(local_frame, textvariable=self.ip_var, style="Local.TLabel").grid(row=row, column=1, sticky="w", pady=2)
+        ttk.Label(local_content, text="IP:", style="Local.TLabel").grid(row=row, column=0, sticky="w", pady=2)
+        ttk.Label(local_content, textvariable=self.ip_var, style="Local.TLabel").grid(row=row, column=1, sticky="w", pady=2)
         row += 1
 
-        ttk.Label(local_frame, text="Gateway:", style="Local.TLabel").grid(row=row, column=0, sticky="w", pady=2)
-        ttk.Label(local_frame, textvariable=self.gateway_var, style="Local.TLabel").grid(row=row, column=1, sticky="w", pady=2)
+        ttk.Label(local_content, text="Gateway:", style="Local.TLabel").grid(row=row, column=0, sticky="w", pady=2)
+        ttk.Label(local_content, textvariable=self.gateway_var, style="Local.TLabel").grid(row=row, column=1, sticky="w", pady=2)
         row += 1
 
-        ttk.Label(local_frame, text="DNS:", style="Local.TLabel").grid(row=row, column=0, sticky="w", pady=2)
-        ttk.Label(local_frame, textvariable=self.dns_var, style="Local.TLabel").grid(row=row, column=1, sticky="w", pady=2)
+        ttk.Label(local_content, text="DNS:", style="Local.TLabel").grid(row=row, column=0, sticky="w", pady=2)
+        ttk.Label(local_content, textvariable=self.dns_var, style="Local.TLabel").grid(row=row, column=1, sticky="w", pady=2)
         row += 1
 
-        ttk.Label(local_frame, text="VLAN:", style="Local.TLabel").grid(row=row, column=0, sticky="w", pady=2)
-        ttk.Label(local_frame, textvariable=self.vlan_var, style="Local.TLabel").grid(row=row, column=1, sticky="w", pady=2)
+        ttk.Label(local_content, text="VLAN:", style="Local.TLabel").grid(row=row, column=0, sticky="w", pady=2)
+        ttk.Label(local_content, textvariable=self.vlan_var, style="Local.TLabel").grid(row=row, column=1, sticky="w", pady=2)
 
-        ttk.Label(internet_frame, text="IP p\u00fablica:", style="Internet.TLabel").grid(row=0, column=0, sticky="w", pady=2)
-        ttk.Label(internet_frame, textvariable=self.public_ip_var, style="Internet.TLabel").grid(row=0, column=1, sticky="w", pady=2)
+        ttk.Label(internet_content, text="IP p\u00fablica:", style="Internet.TLabel").grid(row=0, column=0, sticky="w", pady=2)
+        ttk.Label(internet_content, textvariable=self.public_ip_var, style="Internet.TLabel").grid(row=0, column=1, sticky="w", pady=2)
 
         row = 0
-        ttk.Label(phys_frame, text="Velocidad enlace:", style="Phys.TLabel").grid(row=row, column=0, sticky="w", pady=2)
-        ttk.Label(phys_frame, textvariable=self.speed_var, style="Phys.TLabel").grid(row=row, column=1, sticky="w", pady=2)
+        ttk.Label(phys_content, text="Velocidad enlace:", style="Phys.TLabel").grid(row=row, column=0, sticky="w", pady=2)
+        ttk.Label(phys_content, textvariable=self.speed_var, style="Phys.TLabel").grid(row=row, column=1, sticky="w", pady=2)
         row += 1
 
-        ttk.Label(phys_frame, text="PoE:", style="Phys.TLabel").grid(row=row, column=0, sticky="w", pady=2)
-        ttk.Label(phys_frame, textvariable=self.poe_var, style="Phys.TLabel").grid(row=row, column=1, sticky="w", pady=2)
+        ttk.Label(phys_content, text="PoE:", style="Phys.TLabel").grid(row=row, column=0, sticky="w", pady=2)
+        ttk.Label(phys_content, textvariable=self.poe_var, style="Phys.TLabel").grid(row=row, column=1, sticky="w", pady=2)
         row += 1
 
-        ttk.Label(phys_frame, text="LLDP/CDP:", style="Phys.TLabel").grid(row=row, column=0, sticky="w", pady=2)
-        ttk.Label(phys_frame, textvariable=self.lldp_var, style="Phys.TLabel").grid(row=row, column=1, sticky="w", pady=2)
+        ttk.Label(phys_content, text="LLDP/CDP:", style="Phys.TLabel").grid(row=row, column=0, sticky="w", pady=2)
+        ttk.Label(phys_content, textvariable=self.lldp_var, style="Phys.TLabel").grid(row=row, column=1, sticky="w", pady=2)
         self.lldp_button = ttk.Button(
-            phys_frame, text="Analizar", command=self.detect_neighbors
+            phys_content, text="Analizar", command=self.detect_neighbors
         )
         self.lldp_button.grid(row=row, column=2, sticky="w", padx=5)
 
