@@ -12,7 +12,8 @@ PocketEthernet.
   enlace, VLAN detectada y estado PoE. Permite escanear la red y los puertos de
   los hosts encontrados mediante `nmap`. Incluye una pestaña para hacer `ping`
   a cualquier host y otra para configurar la red de la interfaz seleccionada
-  (DHCP o IP estática).
+  (DHCP o IP estática). La configuración se guarda en `/etc/dhcpcd.conf` para
+  que persista tras reiniciar.
 - `install.sh`: script para instalar las dependencias necesarias en Raspberry Pi OS o sistemas basados en Debian (incluye `pyroute2` para detectar VLAN).
 
 ## Uso
