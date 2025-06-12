@@ -411,6 +411,37 @@ class NetworkMonitor(tk.Tk):
         return vlan_iface
 
     @staticmethod
+    def _is_vlan_interface(iface):
+        """Return True if the interface represents a VLAN."""
+        if IPRoute is not None:
+            try:
+                with IPRoute() as ipr:
+                    idx = ipr.link_lookup(ifname=iface)
+                    if idx:
+                        info = ipr.get_links(idx[0])[0]
+                        linkinfo = info.get_attr("IFLA_LINKINFO")
+                        if linkinfo and linkinfo.get_attr("IFLA_INFO_KIND") == "vlan":
+                            return True
+            except Exception:
+                pass
+        return os.path.exists(f"/proc/net/vlan/{iface}")
+
+    @classmethod
+    def cleanup_vlan_interfaces(cls):
+        """Remove temporary VLAN interfaces left from previous runs."""
+        for iface in netifaces.interfaces():
+            if "." not in iface:
+                continue
+            base, suffix = iface.split(".", 1)
+            if not suffix.isdigit() or base not in netifaces.interfaces():
+                continue
+            if cls._is_vlan_interface(iface):
+                try:
+                    subprocess.run(["ip", "link", "delete", iface], check=True, capture_output=True)
+                except Exception:
+                    pass
+
+    @staticmethod
     def detect_poe():
         # Placeholder for PoE detection logic
         return "N/A"
@@ -1005,6 +1036,7 @@ class NetworkMonitor(tk.Tk):
 
 
 def main():
+    NetworkMonitor.cleanup_vlan_interfaces()
     app = NetworkMonitor()
     app.mainloop()
 

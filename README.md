@@ -21,6 +21,8 @@ PocketEthernet.
   Además, las pestañas de escaneo y ping permiten introducir un ID de VLAN.
   Si se especifica, las pruebas se realizan usando la interfaz etiquetada
   correspondiente (por ejemplo `eth0.10`).
+  Las VLAN temporales creadas para estas pruebas se eliminan automáticamente
+  al iniciar la aplicación para evitar que queden interfaces residuales.
 - `install.sh`: script para instalar las dependencias necesarias en Raspberry Pi OS o sistemas basados en Debian. Emplea el Python obtenido con `which python3` para que las bibliotecas funcionen al ejecutar la aplicación con privilegios (incluye `pyroute2` para detectar VLAN y `ethtool` para el parpadeo de puertos).
 
 ## Uso
