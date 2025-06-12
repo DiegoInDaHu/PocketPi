@@ -129,6 +129,7 @@ class NetworkMonitor(tk.Tk):
         self.style.configure("TEntry", font=("Arial", 16))
         self.style.configure("TCombobox", font=("Arial", 16))
         self.style.configure("TLabelframe.Label", font=("Arial", 16, "bold"))
+        self.style.configure("Small.TLabel", font=("Arial", 12))
 
         self.style.configure("Local.TFrame", background="#e6f4ff")
         self.style.configure("Local.TLabel", background="#e6f4ff")
@@ -151,7 +152,7 @@ class NetworkMonitor(tk.Tk):
         self.notebook.add(self.ping_frame, text="Ping")
         self.notebook.add(self.external_frame, text="Pruebas externas")
         self.notebook.add(self.blinker_frame, text="Port blinker")
-        self.notebook.add(self.config_frame, text="Configuraci\u00f3n")
+        self.notebook.add(self.config_frame, text="Configurar adaptador")
         self.notebook.pack(fill="both", expand=True, padx=10, pady=10)
         self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_changed)
 
@@ -223,7 +224,7 @@ class NetworkMonitor(tk.Tk):
         # Scan widgets
         scan_opts = ttk.Frame(self.scan_frame)
         scan_opts.pack(fill="x", pady=2)
-        ttk.Label(scan_opts, text="VLAN ID (opc.):").grid(row=0, column=0, sticky="w", padx=(0, 5))
+        ttk.Label(scan_opts, text="VLAN ID (opc.):", style="Small.TLabel").grid(row=0, column=0, sticky="w", padx=(0, 5))
         vcmd = (self.register(self.validate_vlan), "%P")
         self.vlan_entry_scan = ttk.Entry(
             scan_opts,
@@ -236,8 +237,9 @@ class NetworkMonitor(tk.Tk):
         self.vlan_entry_scan.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.vlan_entry_scan))
 
         self.scan_button = ttk.Button(scan_opts, text="Escanear red", command=self.scan_network)
-        self.scan_button.grid(row=0, column=2)
-        scan_opts.columnconfigure(2, weight=1)
+        self.scan_button.grid(row=1, column=0, columnspan=3, pady=5)
+        for i in range(3):
+            scan_opts.columnconfigure(i, weight=1)
 
         columns = ("ip", "mac")
         self.host_tree = ttk.Treeview(self.scan_frame, columns=columns, show="headings", height=8)
@@ -259,7 +261,7 @@ class NetworkMonitor(tk.Tk):
 
         ping_opts = ttk.Frame(self.ping_frame)
         ping_opts.pack(fill="x", pady=2)
-        ttk.Label(ping_opts, text="VLAN ID (opc.):").grid(row=0, column=0, sticky="w", padx=(0, 5))
+        ttk.Label(ping_opts, text="VLAN ID (opc.):", style="Small.TLabel").grid(row=0, column=0, sticky="w", padx=(0, 5))
         self.vlan_entry_ping = ttk.Entry(
             ping_opts,
             textvariable=self.vlan_id_var,
@@ -270,9 +272,10 @@ class NetworkMonitor(tk.Tk):
         self.vlan_entry_ping.grid(row=0, column=1, padx=(0, 5), sticky="w")
         self.vlan_entry_ping.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.vlan_entry_ping))
 
-        self.ping_button = ttk.Button(ping_opts, text="Hacer ping", command=self.run_ping)
-        self.ping_button.grid(row=0, column=2)
-        ping_opts.columnconfigure(2, weight=1)
+        self.ping_button = ttk.Button(ping_opts, text="Ping", command=self.run_ping)
+        self.ping_button.grid(row=1, column=0, columnspan=3, pady=5)
+        for i in range(3):
+            ping_opts.columnconfigure(i, weight=1)
         self.ping_text = tk.Text(self.ping_frame, height=8, font=("Arial", 16))
         self.ping_text.pack(fill="both", expand=True, padx=5, pady=5)
 
