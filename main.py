@@ -198,7 +198,9 @@ class NetworkMonitor(tk.Tk):
             command=self.scan_network,
             width=self.button_width,
         )
+
         self.scan_button.place(relx=0.5, rely=0.5, anchor="center")
+
 
         columns = ("ip", "mac")
         self.host_tree = ttk.Treeview(self.scan_frame, columns=columns, show="headings", height=8)
@@ -243,7 +245,9 @@ class NetworkMonitor(tk.Tk):
             command=self.run_ping,
             width=self.button_width,
         )
+
         self.ping_button.place(relx=0.5, rely=0.5, anchor="center")
+
         self.ping_text = tk.Text(self.ping_frame, height=8, font=("Arial", 16))
         self.ping_text.pack(fill="both", expand=True, padx=5, pady=5)
 
