@@ -177,7 +177,7 @@ class NetworkMonitor(tk.Tk):
 
         # Scan widgets
         scan_opts = ttk.Frame(self.scan_frame, padding=(0, 5))
-        scan_opts.pack(fill="x", pady=5)
+        scan_opts.pack(fill="x", pady=20)
 
         left_scan = ttk.Frame(scan_opts)
         left_scan.pack(side="left")
@@ -225,7 +225,7 @@ class NetworkMonitor(tk.Tk):
         self.ping_entry.pack(fill="x", padx=5)
 
         ping_opts = ttk.Frame(self.ping_frame, padding=(0, 5))
-        ping_opts.pack(fill="x", pady=5)
+        ping_opts.pack(fill="x", pady=20)
 
         left_ping = ttk.Frame(ping_opts)
         left_ping.pack(side="left")
