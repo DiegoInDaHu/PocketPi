@@ -32,9 +32,10 @@ from scapy.all import ARP, Ether, srp
 class NumericKeypad(tk.Toplevel):
     """Simple on-screen numeric keypad."""
 
-    def __init__(self, master, entry):
+    def __init__(self, master, entry=None):
         super().__init__(master)
         self.entry = entry
+        self.withdraw()
         self.title("Teclado")
         self.resizable(False, False)
         self.attributes("-topmost", True)
@@ -63,8 +64,8 @@ class NumericKeypad(tk.Toplevel):
         self.transient(master)
 
     def close(self):
-        """Close keypad and remove focus from entry widgets."""
-        self.destroy()
+        """Hide keypad and return focus to the main window."""
+        self.withdraw()
         self.master.focus_set()
 
     def _on_press(self, value):
@@ -224,22 +225,25 @@ class NetworkMonitor(tk.Tk):
         # Scan widgets
         scan_opts = ttk.Frame(self.scan_frame)
         scan_opts.pack(fill="x", pady=2)
-        ttk.Label(scan_opts, text="VLAN ID (opc.):", style="Small.TLabel").grid(row=0, column=0, sticky="w", padx=(0, 5))
+
+        left_scan = ttk.Frame(scan_opts)
+        left_scan.pack(side="left")
+        ttk.Label(left_scan, text="VLAN ID (opc.):", style="Small.TLabel").pack(side="left", padx=(0, 5))
         vcmd = (self.register(self.validate_vlan), "%P")
         self.vlan_entry_scan = ttk.Entry(
-            scan_opts,
+            left_scan,
             textvariable=self.vlan_id_var,
             validate="key",
             validatecommand=vcmd,
             width=8,
         )
-        self.vlan_entry_scan.grid(row=0, column=1, padx=(0, 5), sticky="w")
+        self.vlan_entry_scan.pack(side="left")
         self.vlan_entry_scan.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.vlan_entry_scan))
 
-        self.scan_button = ttk.Button(scan_opts, text="Escanear red", command=self.scan_network)
-        self.scan_button.grid(row=1, column=0, columnspan=3, pady=5)
-        for i in range(3):
-            scan_opts.columnconfigure(i, weight=1)
+        center_scan = ttk.Frame(scan_opts)
+        center_scan.pack(side="left", expand=True)
+        self.scan_button = ttk.Button(center_scan, text="Escanear red", command=self.scan_network)
+        self.scan_button.pack(pady=5)
 
         columns = ("ip", "mac")
         self.host_tree = ttk.Treeview(self.scan_frame, columns=columns, show="headings", height=8)
@@ -261,21 +265,24 @@ class NetworkMonitor(tk.Tk):
 
         ping_opts = ttk.Frame(self.ping_frame)
         ping_opts.pack(fill="x", pady=2)
-        ttk.Label(ping_opts, text="VLAN ID (opc.):", style="Small.TLabel").grid(row=0, column=0, sticky="w", padx=(0, 5))
+
+        left_ping = ttk.Frame(ping_opts)
+        left_ping.pack(side="left")
+        ttk.Label(left_ping, text="VLAN ID (opc.):", style="Small.TLabel").pack(side="left", padx=(0, 5))
         self.vlan_entry_ping = ttk.Entry(
-            ping_opts,
+            left_ping,
             textvariable=self.vlan_id_var,
             validate="key",
             validatecommand=vcmd,
             width=8,
         )
-        self.vlan_entry_ping.grid(row=0, column=1, padx=(0, 5), sticky="w")
+        self.vlan_entry_ping.pack(side="left")
         self.vlan_entry_ping.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.vlan_entry_ping))
 
-        self.ping_button = ttk.Button(ping_opts, text="Ping", command=self.run_ping)
-        self.ping_button.grid(row=1, column=0, columnspan=3, pady=5)
-        for i in range(3):
-            ping_opts.columnconfigure(i, weight=1)
+        center_ping = ttk.Frame(ping_opts)
+        center_ping.pack(side="left", expand=True)
+        self.ping_button = ttk.Button(center_ping, text="Ping", command=self.run_ping)
+        self.ping_button.pack(pady=5)
         self.ping_text = tk.Text(self.ping_frame, height=8, font=("Arial", 16))
         self.ping_text.pack(fill="both", expand=True, padx=5, pady=5)
 
@@ -382,14 +389,17 @@ class NetworkMonitor(tk.Tk):
 
     def show_numeric_keypad(self, widget, _event=None):
         """Display on-screen keypad for the focused entry."""
-        if self.keypad is not None and self.keypad.winfo_exists():
-            self.keypad.destroy()
-        self.keypad = NumericKeypad(self, widget)
+        if self.keypad is None or not self.keypad.winfo_exists():
+            self.keypad = NumericKeypad(self, widget)
+        else:
+            self.keypad.entry = widget
+        self.keypad.deiconify()
+        self.keypad.lift()
 
     def hide_numeric_keypad(self, _event=None):
         """Hide the on-screen keypad if visible."""
         if self.keypad is not None and self.keypad.winfo_exists():
-            self.keypad.destroy()
+            self.keypad.withdraw()
         self.focus_set()
 
     def _belongs_to_combobox(self, widget):
