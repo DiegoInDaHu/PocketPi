@@ -56,11 +56,16 @@ class NumericKeypad(tk.Toplevel):
                 font=("Arial", 14),
             ).grid(row=r, column=c, padx=2, pady=2)
 
-        tk.Button(self, text="Cerrar", command=self.destroy, font=("Arial", 14)).grid(
+        tk.Button(self, text="Cerrar", command=self.close, font=("Arial", 14)).grid(
             row=4, column=0, columnspan=3, pady=(5, 0), sticky="nsew"
         )
 
         self.transient(master)
+
+    def close(self):
+        """Close keypad and remove focus from entry widgets."""
+        self.destroy()
+        self.master.focus_set()
 
     def _on_press(self, value):
         if value == "\u232b":
@@ -134,20 +139,21 @@ class NetworkMonitor(tk.Tk):
         self.style.configure("Phys.TFrame", background="#fff4e6")
         self.style.configure("Phys.TLabel", background="#fff4e6")
 
-        notebook = ttk.Notebook(self)
-        self.info_frame = ttk.Frame(notebook)
-        self.scan_frame = ttk.Frame(notebook)
-        self.ping_frame = ttk.Frame(notebook)
-        self.external_frame = ttk.Frame(notebook)
-        self.blinker_frame = ttk.Frame(notebook)
-        self.config_frame = ttk.Frame(notebook)
-        notebook.add(self.info_frame, text="Informaci\u00f3n")
-        notebook.add(self.scan_frame, text="Escaneo")
-        notebook.add(self.ping_frame, text="Ping")
-        notebook.add(self.external_frame, text="Pruebas externas")
-        notebook.add(self.blinker_frame, text="Port blinker")
-        notebook.add(self.config_frame, text="Configuraci\u00f3n")
-        notebook.pack(fill="both", expand=True, padx=10, pady=10)
+        self.notebook = ttk.Notebook(self)
+        self.info_frame = ttk.Frame(self.notebook)
+        self.scan_frame = ttk.Frame(self.notebook)
+        self.ping_frame = ttk.Frame(self.notebook)
+        self.external_frame = ttk.Frame(self.notebook)
+        self.blinker_frame = ttk.Frame(self.notebook)
+        self.config_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.info_frame, text="Informaci\u00f3n")
+        self.notebook.add(self.scan_frame, text="Escaneo")
+        self.notebook.add(self.ping_frame, text="Ping")
+        self.notebook.add(self.external_frame, text="Pruebas externas")
+        self.notebook.add(self.blinker_frame, text="Port blinker")
+        self.notebook.add(self.config_frame, text="Configuraci\u00f3n")
+        self.notebook.pack(fill="both", expand=True, padx=10, pady=10)
+        self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_changed)
 
         # Network info widgets
         local_frame = ttk.LabelFrame(self.info_frame, text="Red local")
@@ -381,6 +387,7 @@ class NetworkMonitor(tk.Tk):
         """Hide the on-screen keypad if visible."""
         if self.keypad is not None and self.keypad.winfo_exists():
             self.keypad.destroy()
+        self.focus_set()
 
     def _check_hide_keypad(self, event):
         widget = event.widget
@@ -401,6 +408,11 @@ class NetworkMonitor(tk.Tk):
             self.show_numeric_keypad(widget)
         else:
             self.hide_numeric_keypad()
+
+    def on_tab_changed(self, _event=None):
+        """Clear focus and hide keypad when switching tabs."""
+        self.focus_set()
+        self.hide_numeric_keypad()
 
 
     # ------------------------------------------------------------------
