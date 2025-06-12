@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 import urllib.request
+import socket
 
 import netifaces
 import psutil
@@ -39,6 +40,7 @@ class NetworkMonitor(tk.Tk):
         self.ip_var = tk.StringVar()
         self.gateway_var = tk.StringVar()
         self.dns_var = tk.StringVar()
+        self.public_ip_var = tk.StringVar(value="N/A")
         self.speed_var = tk.StringVar()
         self.vlan_var = tk.StringVar()
         self.poe_var = tk.StringVar()
@@ -49,6 +51,7 @@ class NetworkMonitor(tk.Tk):
 
         self.update_available = self.check_updates()
         self.create_widgets()
+        self.update_public_ip()
 
         # Thread to refresh network data periodically
         threading.Thread(target=self.monitor, daemon=True).start()
@@ -72,7 +75,7 @@ class NetworkMonitor(tk.Tk):
         notebook.add(self.info_frame, text="Informaci\u00f3n")
         notebook.add(self.scan_frame, text="Escaneo")
         notebook.add(self.ping_frame, text="Ping")
-        notebook.add(self.external_frame, text="IP externa")
+        notebook.add(self.external_frame, text="Pruebas externas")
         notebook.add(self.config_frame, text="Configuraci\u00f3n")
         if self.update_available:
             notebook.add(self.update_frame, text="Actualizaci\u00f3n")
@@ -100,6 +103,10 @@ class NetworkMonitor(tk.Tk):
 
         ttk.Label(self.info_frame, text="DNS:").grid(row=row, column=0, sticky="w", pady=2)
         ttk.Label(self.info_frame, textvariable=self.dns_var).grid(row=row, column=1, sticky="w", pady=2)
+        row += 1
+
+        ttk.Label(self.info_frame, text="IP p\u00fablica:").grid(row=row, column=0, sticky="w", pady=2)
+        ttk.Label(self.info_frame, textvariable=self.public_ip_var).grid(row=row, column=1, sticky="w", pady=2)
         row += 1
 
         ttk.Label(self.info_frame, text="Velocidad enlace:").grid(row=row, column=0, sticky="w", pady=2)
@@ -151,16 +158,19 @@ class NetworkMonitor(tk.Tk):
         self.ping_text = tk.Text(self.ping_frame, height=8)
         self.ping_text.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # External IP widgets
-        ttk.Label(self.external_frame, text="IP externa:").pack(pady=5)
-        self.external_ip_var = tk.StringVar(value="N/A")
-        ttk.Label(
-            self.external_frame, textvariable=self.external_ip_var
-        ).pack(pady=5)
-        self.external_button = ttk.Button(
-            self.external_frame, text="Detectar", command=self.detect_external_ip
+        # External tests widgets
+        ttk.Label(self.external_frame, text="Host o dominio:").pack(pady=5)
+        self.test_host_entry = ttk.Entry(self.external_frame)
+        self.test_host_entry.pack(fill="x", padx=5)
+        ttk.Label(self.external_frame, text="Puerto:").pack(pady=5)
+        self.test_port_entry = ttk.Entry(self.external_frame)
+        self.test_port_entry.pack(fill="x", padx=5)
+        self.test_button = ttk.Button(
+            self.external_frame, text="Probar conexi\u00f3n", command=self.test_connection
         )
-        self.external_button.pack(pady=5)
+        self.test_button.pack(pady=5)
+        self.test_output = tk.Text(self.external_frame, height=6)
+        self.test_output.pack(fill="both", expand=True, padx=5, pady=5)
 
         # Network configuration widgets
         row = 0
@@ -546,14 +556,12 @@ class NetworkMonitor(tk.Tk):
 
     # ------------------------------------------------------------------
     # External IP functions
-    def detect_external_ip(self):
-        threading.Thread(target=self._external_ip_thread, daemon=True).start()
+    def update_public_ip(self):
+        threading.Thread(target=self._public_ip_thread, daemon=True).start()
 
-    def _external_ip_thread(self):
-        self.start_button_animation(self.external_button)
+    def _public_ip_thread(self):
         ip = self.fetch_external_ip()
-        self.external_ip_var.set(ip)
-        self.stop_button_animation(self.external_button)
+        self.public_ip_var.set(ip)
 
     @staticmethod
     def fetch_external_ip():
@@ -562,6 +570,48 @@ class NetworkMonitor(tk.Tk):
                 return resp.read().decode().strip()
         except Exception:
             return "Error"
+
+    # ------------------------------------------------------------------
+    # External connection test
+    def test_connection(self):
+        host = self.test_host_entry.get().strip()
+        port = self.test_port_entry.get().strip()
+        self.test_output.delete("1.0", tk.END)
+        if not host or not port:
+            self.test_output.insert(tk.END, "Indica host y puerto\n")
+            return
+        try:
+            port = int(port)
+        except ValueError:
+            self.test_output.insert(tk.END, "Puerto no v\u00e1lido\n")
+            return
+        self.start_button_animation(self.test_button)
+        threading.Thread(
+            target=self._test_connection_thread,
+            args=(host, port),
+            daemon=True,
+        ).start()
+
+    def _test_connection_thread(self, host, port):
+        result = ""
+        sock = socket.socket()
+        sock.settimeout(3)
+        try:
+            sock.connect((host, port))
+            result = "Puerto abierto"
+            try:
+                banner = sock.recv(1024)
+                if banner:
+                    banner = banner.decode(errors="ignore").strip()
+                    result += f"\nBanner: {banner}"
+            except Exception:
+                pass
+        except Exception as exc:
+            result = f"Puerto cerrado o sin respuesta ({exc})"
+        finally:
+            sock.close()
+        self.test_output.insert(tk.END, result + "\n")
+        self.stop_button_animation(self.test_button)
 
     # ------------------------------------------------------------------
     # Network configuration functions
