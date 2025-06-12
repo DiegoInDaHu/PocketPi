@@ -80,11 +80,13 @@ class NetworkMonitor(tk.Tk):
         self.scan_frame = ttk.Frame(notebook)
         self.ping_frame = ttk.Frame(notebook)
         self.external_frame = ttk.Frame(notebook)
+        self.blinker_frame = ttk.Frame(notebook)
         self.config_frame = ttk.Frame(notebook)
         notebook.add(self.info_frame, text="Informaci\u00f3n")
         notebook.add(self.scan_frame, text="Escaneo")
         notebook.add(self.ping_frame, text="Ping")
         notebook.add(self.external_frame, text="Pruebas externas")
+        notebook.add(self.blinker_frame, text="Port blinker")
         notebook.add(self.config_frame, text="Configuraci\u00f3n")
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
@@ -186,6 +188,20 @@ class NetworkMonitor(tk.Tk):
         self.test_button.pack(pady=5)
         self.test_output = tk.Text(self.external_frame, height=6)
         self.test_output.pack(fill="both", expand=True, padx=5, pady=5)
+
+        # Port blinker widgets
+        ttk.Label(self.blinker_frame, text="Duraci\u00f3n (s):").pack(pady=5)
+        self.blink_seconds_var = tk.StringVar(value="5")
+        self.blink_seconds_entry = ttk.Entry(
+            self.blinker_frame, textvariable=self.blink_seconds_var
+        )
+        self.blink_seconds_entry.pack(fill="x", padx=5)
+        self.blink_button = ttk.Button(
+            self.blinker_frame, text="Parpadear puerto", command=self.blink_port
+        )
+        self.blink_button.pack(pady=5)
+        self.blink_output = tk.Text(self.blinker_frame, height=4)
+        self.blink_output.pack(fill="both", expand=True, padx=5, pady=5)
 
         # Network configuration widgets
         row = 0
@@ -581,6 +597,40 @@ class NetworkMonitor(tk.Tk):
             return " ".join(parts)
 
         return "N/A"
+
+    # ------------------------------------------------------------------
+    # Port blinker functions
+    def blink_port(self):
+        secs = self.blink_seconds_var.get().strip()
+        self.blink_output.delete("1.0", tk.END)
+        try:
+            secs = int(secs)
+            if secs <= 0:
+                raise ValueError
+        except ValueError:
+            self.blink_output.insert(tk.END, "Tiempo no v\u00e1lido\n")
+            return
+        self.start_button_animation(self.blink_button)
+        threading.Thread(target=self._blink_port_thread, args=(secs,), daemon=True).start()
+
+    def _blink_port_thread(self, secs):
+        iface = self.interface_var.get()
+        cmd = ["sudo", "ethtool", "-p", iface, str(secs)]
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True)
+            output = proc.stdout or proc.stderr
+            if proc.returncode != 0:
+                raise subprocess.CalledProcessError(proc.returncode, cmd, output)
+        except Exception as exc:
+            self.blink_output.insert(tk.END, f"ethtool fall\u00f3: {exc}\n")
+            for _ in range(secs):
+                subprocess.run(["sudo", "ip", "link", "set", iface, "down"], capture_output=True)
+                time.sleep(0.5)
+                subprocess.run(["sudo", "ip", "link", "set", iface, "up"], capture_output=True)
+                time.sleep(0.5)
+            output = "Interfaz alternada para identificar puerto\n"
+        self.blink_output.insert(tk.END, output or "\n")
+        self.stop_button_animation(self.blink_button)
 
     # ------------------------------------------------------------------
     # Ping functions
