@@ -192,15 +192,13 @@ class NetworkMonitor(tk.Tk):
         )
         self.vlan_entry_scan.pack(side="left")
 
-        center_scan = ttk.Frame(scan_opts)
-        center_scan.pack(side="left", expand=True, fill="x")
         self.scan_button = ttk.Button(
-            center_scan,
+            scan_opts,
             text="Escanear red",
             command=self.scan_network,
             width=self.button_width,
         )
-        self.scan_button.pack(pady=5, anchor="w")
+        self.scan_button.place(relx=0.5, rely=0.5, anchor="center")
 
         columns = ("ip", "mac")
         self.host_tree = ttk.Treeview(self.scan_frame, columns=columns, show="headings", height=8)
@@ -239,15 +237,13 @@ class NetworkMonitor(tk.Tk):
         )
         self.vlan_entry_ping.pack(side="left")
 
-        center_ping = ttk.Frame(ping_opts)
-        center_ping.pack(side="left", expand=True, fill="x")
         self.ping_button = ttk.Button(
-            center_ping,
+            ping_opts,
             text="Ping",
             command=self.run_ping,
             width=self.button_width,
         )
-        self.ping_button.pack(pady=5, anchor="w")
+        self.ping_button.place(relx=0.5, rely=0.5, anchor="center")
         self.ping_text = tk.Text(self.ping_frame, height=8, font=("Arial", 16))
         self.ping_text.pack(fill="both", expand=True, padx=5, pady=5)
 
