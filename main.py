@@ -430,6 +430,41 @@ class NetworkMonitor(tk.Tk):
                 pass
         return config
 
+    @staticmethod
+    def update_dhcpcd_config(iface, mode, ip_addr="", mask="", gw="", dns=""):
+        """Write network config to /etc/dhcpcd.conf for persistence."""
+        path = "/etc/dhcpcd.conf"
+        try:
+            lines = []
+            if os.path.exists(path):
+                with open(path) as f:
+                    lines = f.readlines()
+
+            new_lines = []
+            i = 0
+            while i < len(lines):
+                line = lines[i]
+                if line.startswith("interface ") and line.split()[1] == iface:
+                    i += 1
+                    while i < len(lines) and not lines[i].startswith("interface "):
+                        i += 1
+                    continue
+                new_lines.append(line)
+                i += 1
+
+            if mode == "static":
+                new_lines.append(f"\ninterface {iface}\n")
+                new_lines.append(f"static ip_address={ip_addr}/{mask}\n")
+                new_lines.append(f"static routers={gw}\n")
+                if dns:
+                    new_lines.append(f"static domain_name_servers={dns}\n")
+
+            with open(path, "w") as f:
+                f.writelines(new_lines)
+        except Exception as exc:  # pragma: no cover - filesystem or permission
+            return str(exc)
+        return ""
+
     def apply_network_config(self):
         threading.Thread(target=self._apply_config_thread, daemon=True).start()
 
@@ -437,6 +472,7 @@ class NetworkMonitor(tk.Tk):
         iface = self.config_interface_var.get()
         self.config_output.delete("1.0", tk.END)
         cmds = []
+        ip_addr = mask = gw = dns = ""
         if self.config_mode.get() == "dhcp":
             cmds = [["sudo", "dhclient", "-r", iface], ["sudo", "dhclient", iface]]
         else:
@@ -465,6 +501,16 @@ class NetworkMonitor(tk.Tk):
                 self.config_output.insert(tk.END, proc.stdout + proc.stderr)
             except Exception as exc:  # pragma: no cover - runtime issues
                 self.config_output.insert(tk.END, str(exc) + "\n")
+        err = self.update_dhcpcd_config(
+            iface,
+            self.config_mode.get(),
+            ip_addr if self.config_mode.get() == "static" else "",
+            mask if self.config_mode.get() == "static" else "",
+            gw if self.config_mode.get() == "static" else "",
+            dns if self.config_mode.get() == "static" else "",
+        )
+        if err:
+            self.config_output.insert(tk.END, f"Error al guardar configuraci\u00f3n: {err}\n")
         self.update_info()
         self.load_network_config()
 
