@@ -395,6 +395,7 @@ class NetworkMonitor(tk.Tk):
             self.keypad.entry = widget
         self.keypad.deiconify()
         self.keypad.lift()
+        
 
     def hide_numeric_keypad(self, _event=None):
         """Hide the on-screen keypad if visible."""
