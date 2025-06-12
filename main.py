@@ -6,6 +6,8 @@ import time
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+import urllib.request
+
 import netifaces
 import psutil
 
@@ -64,11 +66,13 @@ class NetworkMonitor(tk.Tk):
         self.info_frame = ttk.Frame(notebook)
         self.scan_frame = ttk.Frame(notebook)
         self.ping_frame = ttk.Frame(notebook)
+        self.external_frame = ttk.Frame(notebook)
         self.config_frame = ttk.Frame(notebook)
         self.update_frame = ttk.Frame(notebook)
         notebook.add(self.info_frame, text="Informaci\u00f3n")
         notebook.add(self.scan_frame, text="Escaneo")
         notebook.add(self.ping_frame, text="Ping")
+        notebook.add(self.external_frame, text="IP externa")
         notebook.add(self.config_frame, text="Configuraci\u00f3n")
         if self.update_available:
             notebook.add(self.update_frame, text="Actualizaci\u00f3n")
@@ -114,7 +118,7 @@ class NetworkMonitor(tk.Tk):
         ttk.Label(self.info_frame, textvariable=self.lldp_var).grid(row=row, column=1, sticky="w", pady=2)
         self.lldp_button = ttk.Button(
             self.info_frame,
-            text="Analizar CDP/LLDP",
+            text="Analizar",
             command=self.detect_neighbors,
         )
         self.lldp_button.grid(row=row, column=2, sticky="w", padx=5)
@@ -146,6 +150,17 @@ class NetworkMonitor(tk.Tk):
         self.ping_button.pack(pady=5)
         self.ping_text = tk.Text(self.ping_frame, height=8)
         self.ping_text.pack(fill="both", expand=True, padx=5, pady=5)
+
+        # External IP widgets
+        ttk.Label(self.external_frame, text="IP externa:").pack(pady=5)
+        self.external_ip_var = tk.StringVar(value="N/A")
+        ttk.Label(
+            self.external_frame, textvariable=self.external_ip_var
+        ).pack(pady=5)
+        self.external_button = ttk.Button(
+            self.external_frame, text="Detectar", command=self.detect_external_ip
+        )
+        self.external_button.pack(pady=5)
 
         # Network configuration widgets
         row = 0
@@ -528,6 +543,25 @@ class NetworkMonitor(tk.Tk):
             output = str(exc)
         self.ping_text.insert(tk.END, output)
         self.stop_button_animation(self.ping_button)
+
+    # ------------------------------------------------------------------
+    # External IP functions
+    def detect_external_ip(self):
+        threading.Thread(target=self._external_ip_thread, daemon=True).start()
+
+    def _external_ip_thread(self):
+        self.start_button_animation(self.external_button)
+        ip = self.fetch_external_ip()
+        self.external_ip_var.set(ip)
+        self.stop_button_animation(self.external_button)
+
+    @staticmethod
+    def fetch_external_ip():
+        try:
+            with urllib.request.urlopen("https://api.ipify.org") as resp:
+                return resp.read().decode().strip()
+        except Exception:
+            return "Error"
 
     # ------------------------------------------------------------------
     # Network configuration functions
