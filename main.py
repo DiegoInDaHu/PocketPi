@@ -29,13 +29,57 @@ except ImportError:  # pragma: no cover - optional dependency
 from scapy.all import ARP, Ether, srp
 
 
+class NumericKeypad(tk.Toplevel):
+    """Simple on-screen numeric keypad."""
+
+    def __init__(self, master, entry):
+        super().__init__(master)
+        self.entry = entry
+        self.title("Teclado")
+        self.resizable(False, False)
+        self.attributes("-topmost", True)
+        self.configure(padx=5, pady=5)
+
+        buttons = [
+            ("7", 0, 0), ("8", 0, 1), ("9", 0, 2),
+            ("4", 1, 0), ("5", 1, 1), ("6", 1, 2),
+            ("1", 2, 0), ("2", 2, 1), ("3", 2, 2),
+            ("0", 3, 0), (".", 3, 1), ("\u232b", 3, 2),
+        ]
+        for text, r, c in buttons:
+            tk.Button(
+                self,
+                text=text,
+                width=4,
+                height=2,
+                command=lambda val=text: self._on_press(val),
+                font=("Arial", 14),
+            ).grid(row=r, column=c, padx=2, pady=2)
+
+        tk.Button(self, text="Cerrar", command=self.destroy, font=("Arial", 14)).grid(
+            row=4, column=0, columnspan=3, pady=(5, 0), sticky="nsew"
+        )
+
+        self.transient(master)
+        self.grab_set()
+
+    def _on_press(self, value):
+        if value == "\u232b":
+            pos = self.entry.index(tk.INSERT)
+            if pos > 0:
+                self.entry.delete(pos - 1)
+        else:
+            self.entry.insert(tk.INSERT, value)
+
+
 class NetworkMonitor(tk.Tk):
     """Tkinter GUI to display and scan network information."""
 
     def __init__(self):
         super().__init__()
         self.title("PocketPi Network Analyzer")
-        self.geometry("600x400")
+        self.geometry("800x480")
+        self.keypad = None
 
         interfaces = self.get_interfaces()
         self.interface_var = tk.StringVar(value=interfaces[0] if interfaces else "")
@@ -73,11 +117,11 @@ class NetworkMonitor(tk.Tk):
 
         self.style = ttk.Style(self)
         self.style.theme_use("clam")
-        self.style.configure("TLabel", font=("Arial", 12))
-        self.style.configure("TButton", font=("Arial", 12), padding=6)
-        self.style.configure("TEntry", font=("Arial", 12))
-        self.style.configure("TCombobox", font=("Arial", 12))
-        self.style.configure("TLabelframe.Label", font=("Arial", 12, "bold"))
+        self.style.configure("TLabel", font=("Arial", 16))
+        self.style.configure("TButton", font=("Arial", 16), padding=10)
+        self.style.configure("TEntry", font=("Arial", 16))
+        self.style.configure("TCombobox", font=("Arial", 16))
+        self.style.configure("TLabelframe.Label", font=("Arial", 16, "bold"))
 
         self.style.configure("Local.TFrame", background="#e6f4ff")
         self.style.configure("Local.TLabel", background="#e6f4ff")
@@ -181,6 +225,7 @@ class NetworkMonitor(tk.Tk):
             width=8,
         )
         self.vlan_entry_scan.grid(row=0, column=1, padx=(0, 5), sticky="w")
+        self.vlan_entry_scan.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.vlan_entry_scan))
 
         self.scan_button = ttk.Button(scan_opts, text="Escanear red", command=self.scan_network)
         self.scan_button.grid(row=0, column=2)
@@ -195,13 +240,14 @@ class NetworkMonitor(tk.Tk):
         self.port_button = ttk.Button(self.scan_frame, text="Escanear puertos", command=self.port_scan)
         self.port_button.pack(pady=5)
 
-        self.port_text = tk.Text(self.scan_frame, height=6, font=("Arial", 12))
+        self.port_text = tk.Text(self.scan_frame, height=6, font=("Arial", 16))
         self.port_text.pack(fill="both", expand=True, padx=5, pady=5)
 
         # Ping widgets
         ttk.Label(self.ping_frame, text="Host o IP:").pack(pady=5)
         self.ping_entry = ttk.Entry(self.ping_frame)
         self.ping_entry.pack(fill="x", padx=5)
+        self.ping_entry.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.ping_entry))
 
         ping_opts = ttk.Frame(self.ping_frame)
         ping_opts.pack(fill="x", pady=2)
@@ -214,25 +260,28 @@ class NetworkMonitor(tk.Tk):
             width=8,
         )
         self.vlan_entry_ping.grid(row=0, column=1, padx=(0, 5), sticky="w")
+        self.vlan_entry_ping.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.vlan_entry_ping))
 
         self.ping_button = ttk.Button(ping_opts, text="Hacer ping", command=self.run_ping)
         self.ping_button.grid(row=0, column=2)
         ping_opts.columnconfigure(2, weight=1)
-        self.ping_text = tk.Text(self.ping_frame, height=8, font=("Arial", 12))
+        self.ping_text = tk.Text(self.ping_frame, height=8, font=("Arial", 16))
         self.ping_text.pack(fill="both", expand=True, padx=5, pady=5)
 
         # External tests widgets
         ttk.Label(self.external_frame, text="Host o dominio:").pack(pady=5)
         self.test_host_entry = ttk.Entry(self.external_frame)
         self.test_host_entry.pack(fill="x", padx=5)
+        self.test_host_entry.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.test_host_entry))
         ttk.Label(self.external_frame, text="Puerto:").pack(pady=5)
         self.test_port_entry = ttk.Entry(self.external_frame)
         self.test_port_entry.pack(fill="x", padx=5)
+        self.test_port_entry.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.test_port_entry))
         self.test_button = ttk.Button(
             self.external_frame, text="Probar conexi\u00f3n", command=self.test_connection
         )
         self.test_button.pack(pady=5)
-        self.test_output = tk.Text(self.external_frame, height=6, font=("Arial", 12))
+        self.test_output = tk.Text(self.external_frame, height=6, font=("Arial", 16))
         self.test_output.pack(fill="both", expand=True, padx=5, pady=5)
 
         # Port blinker widgets
@@ -242,11 +291,12 @@ class NetworkMonitor(tk.Tk):
             self.blinker_frame, textvariable=self.blink_seconds_var
         )
         self.blink_seconds_entry.pack(fill="x", padx=5)
+        self.blink_seconds_entry.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.blink_seconds_entry))
         self.blink_button = ttk.Button(
             self.blinker_frame, text="Parpadear puerto", command=self.blink_port
         )
         self.blink_button.pack(pady=5)
-        self.blink_output = tk.Text(self.blinker_frame, height=4, font=("Arial", 12))
+        self.blink_output = tk.Text(self.blinker_frame, height=4, font=("Arial", 16))
         self.blink_output.pack(fill="both", expand=True, padx=5, pady=5)
 
         # Network configuration widgets
@@ -285,21 +335,25 @@ class NetworkMonitor(tk.Tk):
         ttk.Label(self.config_frame, text="IP:").grid(row=row, column=0, sticky="w", pady=2)
         self.ip_entry = ttk.Entry(self.config_frame)
         self.ip_entry.grid(row=row, column=1, sticky="ew", pady=2)
+        self.ip_entry.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.ip_entry))
         row += 1
 
         ttk.Label(self.config_frame, text="M\u00e1scara:").grid(row=row, column=0, sticky="w", pady=2)
         self.mask_entry = ttk.Entry(self.config_frame)
         self.mask_entry.grid(row=row, column=1, sticky="ew", pady=2)
+        self.mask_entry.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.mask_entry))
         row += 1
 
         ttk.Label(self.config_frame, text="Gateway:").grid(row=row, column=0, sticky="w", pady=2)
         self.gw_entry = ttk.Entry(self.config_frame)
         self.gw_entry.grid(row=row, column=1, sticky="ew", pady=2)
+        self.gw_entry.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.gw_entry))
         row += 1
 
         ttk.Label(self.config_frame, text="DNS:").grid(row=row, column=0, sticky="w", pady=2)
         self.dns_entry = ttk.Entry(self.config_frame)
         self.dns_entry.grid(row=row, column=1, sticky="ew", pady=2)
+        self.dns_entry.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.dns_entry))
         row += 1
 
         self.apply_config_button = ttk.Button(
@@ -308,12 +362,18 @@ class NetworkMonitor(tk.Tk):
         self.apply_config_button.grid(row=row, column=0, columnspan=2, pady=5)
         row += 1
 
-        self.config_output = tk.Text(self.config_frame, height=6, font=("Arial", 12))
+        self.config_output = tk.Text(self.config_frame, height=6, font=("Arial", 16))
         self.config_output.grid(row=row, column=0, columnspan=2, sticky="nsew", padx=5, pady=5)
 
         self.config_frame.columnconfigure(1, weight=1)
         self.toggle_static_fields()
         self.load_network_config()
+
+    def show_numeric_keypad(self, widget, _event=None):
+        """Display on-screen keypad for the focused entry."""
+        if self.keypad is not None and self.keypad.winfo_exists():
+            self.keypad.destroy()
+        self.keypad = NumericKeypad(self, widget)
 
 
     # ------------------------------------------------------------------

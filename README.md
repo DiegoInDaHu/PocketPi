@@ -6,6 +6,11 @@ seleccionar la interfaz de red y realizar escaneos ARP y de puertos para
 diagnosticar la conectividad del entorno, inspirado en las funciones del
 PocketEthernet.
 
+La interfaz se ha rediseñado con botones y textos más grandes para su uso en
+pantallas táctiles. Al enfocar cualquier campo de entrada aparece un teclado
+numérico en pantalla que facilita introducir direcciones IP o valores
+numéricos.
+
 ## Archivos
 
 - `main.py`: aplicación principal. Muestra IP, gateway, DNS, velocidad de
