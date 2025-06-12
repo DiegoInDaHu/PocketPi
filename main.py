@@ -176,8 +176,8 @@ class NetworkMonitor(tk.Tk):
         self.lldp_button.grid(row=row, column=2, sticky="w", padx=5)
 
         # Scan widgets
-        scan_opts = ttk.Frame(self.scan_frame)
-        scan_opts.pack(fill="x", pady=2)
+        scan_opts = ttk.Frame(self.scan_frame, padding=(0, 5))
+        scan_opts.pack(fill="x", pady=5)
 
         left_scan = ttk.Frame(scan_opts)
         left_scan.pack(side="left")
@@ -224,8 +224,8 @@ class NetworkMonitor(tk.Tk):
         self.ping_entry = ttk.Entry(self.ping_frame)
         self.ping_entry.pack(fill="x", padx=5)
 
-        ping_opts = ttk.Frame(self.ping_frame)
-        ping_opts.pack(fill="x", pady=2)
+        ping_opts = ttk.Frame(self.ping_frame, padding=(0, 5))
+        ping_opts.pack(fill="x", pady=5)
 
         left_ping = ttk.Frame(ping_opts)
         left_ping.pack(side="left")
