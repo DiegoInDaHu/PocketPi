@@ -61,7 +61,6 @@ class NumericKeypad(tk.Toplevel):
         )
 
         self.transient(master)
-        self.grab_set()
 
     def _on_press(self, value):
         if value == "\u232b":
@@ -70,6 +69,7 @@ class NumericKeypad(tk.Toplevel):
                 self.entry.delete(pos - 1)
         else:
             self.entry.insert(tk.INSERT, value)
+        self.entry.focus_set()
 
 
 class NetworkMonitor(tk.Tk):
@@ -104,6 +104,8 @@ class NetworkMonitor(tk.Tk):
         self.update_available = self.check_updates()
         self.create_widgets()
         self.update_public_ip()
+        self.bind_all("<Button-1>", self._check_hide_keypad, add="+")
+        self.bind_all("<FocusIn>", self._check_focus_in, add="+")
         if self.update_available:
             self.after(100, self.show_update_popup)
 
@@ -374,6 +376,31 @@ class NetworkMonitor(tk.Tk):
         if self.keypad is not None and self.keypad.winfo_exists():
             self.keypad.destroy()
         self.keypad = NumericKeypad(self, widget)
+
+    def hide_numeric_keypad(self, _event=None):
+        """Hide the on-screen keypad if visible."""
+        if self.keypad is not None and self.keypad.winfo_exists():
+            self.keypad.destroy()
+
+    def _check_hide_keypad(self, event):
+        widget = event.widget
+        if self.keypad is None or not self.keypad.winfo_exists():
+            return
+        if widget.winfo_toplevel() == self.keypad:
+            return
+        if isinstance(widget, (tk.Entry, ttk.Entry)):
+            self.show_numeric_keypad(widget)
+        else:
+            self.hide_numeric_keypad()
+
+    def _check_focus_in(self, event):
+        widget = event.widget
+        if widget.winfo_toplevel() == self.keypad:
+            return
+        if isinstance(widget, (tk.Entry, ttk.Entry)):
+            self.show_numeric_keypad(widget)
+        else:
+            self.hide_numeric_keypad()
 
 
     # ------------------------------------------------------------------
