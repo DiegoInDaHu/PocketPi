@@ -12,7 +12,8 @@ PocketEthernet.
   enlace, VLAN detectada, estado PoE y detecta vecinos CDP/LLDP. Permite escanear la red y los puertos de
 - los hosts encontrados mediante `nmap`. Incluye una pestaña para hacer `ping`
   a cualquier host, otra de **pruebas externas** que verifica la conectividad de
-  un puerto TCP y otra para configurar la red de la interfaz seleccionada. La
+  un puerto TCP, otra para **port blinker** que parpadea el puerto mediante
+  `ethtool` y otra para configurar la red de la interfaz seleccionada. La
   IP pública aparece directamente en la pestaña principal sin necesidad de
   pulsar ningún botón
   (DHCP o IP estática). La configuración se guarda en `/etc/dhcpcd.conf` para
@@ -20,12 +21,13 @@ PocketEthernet.
   Además, las pestañas de escaneo y ping permiten introducir un ID de VLAN.
   Si se especifica, las pruebas se realizan usando la interfaz etiquetada
   correspondiente (por ejemplo `eth0.10`).
-- `install.sh`: script para instalar las dependencias necesarias en Raspberry Pi OS o sistemas basados en Debian. Emplea el Python obtenido con `which python3` para que las bibliotecas funcionen al ejecutar la aplicación con privilegios (incluye `pyroute2` para detectar VLAN).
+- `install.sh`: script para instalar las dependencias necesarias en Raspberry Pi OS o sistemas basados en Debian. Emplea el Python obtenido con `which python3` para que las bibliotecas funcionen al ejecutar la aplicación con privilegios (incluye `pyroute2` para detectar VLAN y `ethtool` para el parpadeo de puertos).
 
 ## Uso
 
 1. Ejecuta `./install.sh` para instalar Python y todas las dependencias
-   necesarias (incluye `nmap`, `arp-scan`, `iputils-ping` e `iproute2`). El
+   necesarias (incluye `nmap`, `arp-scan`, `iputils-ping`, `iproute2` y
+   `ethtool`). El
    script también instala las bibliotecas de Python `netifaces`, `psutil`,
    `scapy`, `python-nmap` y `pyroute2`. El instalador detecta si `pip` admite
    la opción `--break-system-packages` y la usa solo cuando está disponible,
