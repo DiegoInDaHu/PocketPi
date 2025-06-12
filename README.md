@@ -27,7 +27,9 @@ PocketEthernet.
 1. Ejecuta `./install.sh` para instalar Python y todas las dependencias
    necesarias (incluye `nmap`, `arp-scan`, `iputils-ping` e `iproute2`). El
    script también instala las bibliotecas de Python `netifaces`, `psutil`,
-   `scapy`, `python-nmap` y `pyroute2`.
+   `scapy`, `python-nmap` y `pyroute2`. El instalador detecta si `pip` admite
+   la opción `--break-system-packages` y la usa solo cuando está disponible,
+   garantizando compatibilidad con versiones antiguas de la herramienta.
 2. Inicia la interfaz con:
    ```bash
    sudo $(which python3) main.py
