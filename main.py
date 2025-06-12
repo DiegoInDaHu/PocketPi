@@ -180,18 +180,7 @@ class NetworkMonitor(tk.Tk):
         scan_opts = ttk.Frame(self.scan_frame, padding=(0, 5))
         scan_opts.pack(fill="x", pady=10)
 
-        ttk.Label(scan_opts, text="VLAN ID (opc.):", style="Small.TLabel").grid(
-            row=0, column=0, sticky="w", padx=(0, 5)
-        )
         vcmd = (self.register(self.validate_vlan), "%P")
-        self.vlan_entry_scan = ttk.Entry(
-            scan_opts,
-            textvariable=self.vlan_id_var,
-            validate="key",
-            validatecommand=vcmd,
-            width=5,
-        )
-        self.vlan_entry_scan.grid(row=0, column=1, sticky="w")
 
         self.start_scan_button = ttk.Button(
             scan_opts,
@@ -199,7 +188,7 @@ class NetworkMonitor(tk.Tk):
             command=self.scan_network,
             width=3,
         )
-        self.start_scan_button.grid(row=0, column=2, sticky="w", padx=(10, 0))
+        self.start_scan_button.grid(row=0, column=0, sticky="w")
 
         self.stop_scan_button = ttk.Button(
             scan_opts,
@@ -208,7 +197,20 @@ class NetworkMonitor(tk.Tk):
             width=3,
             state="disabled",
         )
-        self.stop_scan_button.grid(row=0, column=3, sticky="w")
+        self.stop_scan_button.grid(row=0, column=1, sticky="w", padx=(5, 10))
+
+        ttk.Label(scan_opts, text="VLAN:", style="Small.TLabel").grid(
+            row=0, column=2, sticky="w", padx=(0, 5)
+        )
+        self.vlan_entry_scan = ttk.Entry(
+            scan_opts,
+            textvariable=self.vlan_id_var,
+            validate="key",
+            validatecommand=vcmd,
+            width=5,
+        )
+        self.vlan_entry_scan.grid(row=0, column=3, sticky="w")
+
         scan_opts.columnconfigure(4, weight=1)
 
         self.scan_status_var = tk.StringVar()
@@ -243,7 +245,7 @@ class NetworkMonitor(tk.Tk):
         self.ping_entry = ttk.Entry(ping_opts)
         self.ping_entry.grid(row=0, column=1, sticky="ew", padx=(0, 5))
 
-        ttk.Label(ping_opts, text="VLAN ID (opc.):", style="Small.TLabel").grid(row=0, column=2, sticky="w", padx=(0, 5))
+        ttk.Label(ping_opts, text="VLAN:", style="Small.TLabel").grid(row=0, column=2, sticky="w", padx=(0, 5))
         self.vlan_entry_ping = ttk.Entry(
             ping_opts,
             textvariable=self.vlan_id_var,
