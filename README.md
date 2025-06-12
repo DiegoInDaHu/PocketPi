@@ -9,7 +9,7 @@ PocketEthernet.
 ## Archivos
 
 - `main.py`: aplicación principal. Muestra IP, gateway, DNS, velocidad de
-  enlace, VLAN detectada y estado PoE. Permite escanear la red y los puertos de
+  enlace, VLAN detectada, estado PoE y detecta vecinos CDP/LLDP. Permite escanear la red y los puertos de
   los hosts encontrados mediante `nmap`. Incluye una pestaña para hacer `ping`
   a cualquier host y otra para configurar la red de la interfaz seleccionada
   (DHCP o IP estática). La configuración se guarda en `/etc/dhcpcd.conf` para
