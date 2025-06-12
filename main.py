@@ -75,7 +75,7 @@ class NetworkMonitor(tk.Tk):
         self.style = ttk.Style(self)
         self.style.theme_use("clam")
         self.style.configure("TLabel", font=("Arial", 16))
-        self.style.configure("TButton", font=("Arial", 16), padding=10)
+        self.style.configure("TButton", font=("Arial", 14), padding=5)
         self.style.configure("TEntry", font=("Arial", 16))
         self.style.configure("TCombobox", font=("Arial", 16))
         self.style.configure("TLabelframe.Label", font=("Arial", 16, "bold"))
@@ -89,6 +89,8 @@ class NetworkMonitor(tk.Tk):
 
         self.style.configure("Phys.TFrame", background="#fff4e6")
         self.style.configure("Phys.TLabel", background="#fff4e6")
+
+        self.button_width = 16
 
         self.notebook = ttk.Notebook(self)
         self.info_frame = ttk.Frame(self.notebook)
@@ -166,7 +168,10 @@ class NetworkMonitor(tk.Tk):
         ttk.Label(phys_content, text="LLDP/CDP:", style="Phys.TLabel").grid(row=row, column=0, sticky="w", pady=2)
         ttk.Label(phys_content, textvariable=self.lldp_var, style="Phys.TLabel").grid(row=row, column=1, sticky="w", pady=2)
         self.lldp_button = ttk.Button(
-            phys_content, text="Analizar", command=self.detect_neighbors
+            phys_content,
+            text="Analizar",
+            command=self.detect_neighbors,
+            width=self.button_width,
         )
         self.lldp_button.grid(row=row, column=2, sticky="w", padx=5)
 
@@ -193,9 +198,9 @@ class NetworkMonitor(tk.Tk):
             center_scan,
             text="Escanear red",
             command=self.scan_network,
-            width=14,
+            width=self.button_width,
         )
-        self.scan_button.pack(pady=5)
+        self.scan_button.pack(pady=5, anchor="w")
 
         columns = ("ip", "mac")
         self.host_tree = ttk.Treeview(self.scan_frame, columns=columns, show="headings", height=8)
@@ -203,7 +208,12 @@ class NetworkMonitor(tk.Tk):
         self.host_tree.heading("mac", text="MAC")
         self.host_tree.pack(fill="both", expand=True, padx=5, pady=5)
 
-        self.port_button = ttk.Button(self.scan_frame, text="Escanear puertos", command=self.port_scan)
+        self.port_button = ttk.Button(
+            self.scan_frame,
+            text="Escanear puertos",
+            command=self.port_scan,
+            width=self.button_width,
+        )
         self.port_button.pack(pady=5)
 
         self.port_text = tk.Text(self.scan_frame, height=6, font=("Arial", 16))
@@ -235,9 +245,9 @@ class NetworkMonitor(tk.Tk):
             center_ping,
             text="Ping",
             command=self.run_ping,
-            width=10,
+            width=self.button_width,
         )
-        self.ping_button.pack(pady=5)
+        self.ping_button.pack(pady=5, anchor="w")
         self.ping_text = tk.Text(self.ping_frame, height=8, font=("Arial", 16))
         self.ping_text.pack(fill="both", expand=True, padx=5, pady=5)
 
@@ -249,7 +259,10 @@ class NetworkMonitor(tk.Tk):
         self.test_port_entry = ttk.Entry(self.external_frame)
         self.test_port_entry.pack(fill="x", padx=5)
         self.test_button = ttk.Button(
-            self.external_frame, text="Probar conexi\u00f3n", command=self.test_connection
+            self.external_frame,
+            text="Probar conexi\u00f3n",
+            command=self.test_connection,
+            width=self.button_width,
         )
         self.test_button.pack(pady=5)
         self.test_output = tk.Text(self.external_frame, height=6, font=("Arial", 16))
@@ -263,7 +276,10 @@ class NetworkMonitor(tk.Tk):
         )
         self.blink_seconds_entry.pack(fill="x", padx=5)
         self.blink_button = ttk.Button(
-            self.blinker_frame, text="Parpadear puerto", command=self.blink_port
+            self.blinker_frame,
+            text="Parpadear puerto",
+            command=self.blink_port,
+            width=self.button_width,
         )
         self.blink_button.pack(pady=5)
         self.blink_output = tk.Text(self.blinker_frame, height=4, font=("Arial", 16))
@@ -323,7 +339,10 @@ class NetworkMonitor(tk.Tk):
         row += 1
 
         self.apply_config_button = ttk.Button(
-            self.config_frame, text="Aplicar", command=self.apply_network_config
+            self.config_frame,
+            text="Aplicar",
+            command=self.apply_network_config,
+            width=self.button_width,
         )
         self.apply_config_button.grid(row=row, column=0, columnspan=2, pady=5)
         row += 1
@@ -996,13 +1015,17 @@ class NetworkMonitor(tk.Tk):
         ).pack(padx=20, pady=10)
         btn_frame = ttk.Frame(popup)
         btn_frame.pack(pady=10)
-        ttk.Button(btn_frame, text="Cancelar", command=popup.destroy).pack(
-            side="left", padx=5
-        )
+        ttk.Button(
+            btn_frame,
+            text="Cancelar",
+            command=popup.destroy,
+            width=self.button_width,
+        ).pack(side="left", padx=5)
         self.update_button = ttk.Button(
             btn_frame,
             text="Actualizar",
             command=lambda: self.update_app(popup),
+            width=self.button_width,
         )
         self.update_button.pack(side="left", padx=5)
         popup.transient(self)
