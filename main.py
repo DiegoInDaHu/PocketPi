@@ -52,6 +52,8 @@ class NetworkMonitor(tk.Tk):
         self.update_available = self.check_updates()
         self.create_widgets()
         self.update_public_ip()
+        if self.update_available:
+            self.after(100, self.show_update_popup)
 
         # Thread to refresh network data periodically
         threading.Thread(target=self.monitor, daemon=True).start()
@@ -71,14 +73,11 @@ class NetworkMonitor(tk.Tk):
         self.ping_frame = ttk.Frame(notebook)
         self.external_frame = ttk.Frame(notebook)
         self.config_frame = ttk.Frame(notebook)
-        self.update_frame = ttk.Frame(notebook)
         notebook.add(self.info_frame, text="Informaci\u00f3n")
         notebook.add(self.scan_frame, text="Escaneo")
         notebook.add(self.ping_frame, text="Ping")
         notebook.add(self.external_frame, text="Pruebas externas")
         notebook.add(self.config_frame, text="Configuraci\u00f3n")
-        if self.update_available:
-            notebook.add(self.update_frame, text="Actualizaci\u00f3n")
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
         # Network info widgets
@@ -235,17 +234,6 @@ class NetworkMonitor(tk.Tk):
         self.toggle_static_fields()
         self.load_network_config()
 
-        # Update widgets in a separate tab
-        ttk.Label(
-            self.update_frame,
-            text="Comprobar y aplicar actualizaciones"
-        ).pack(pady=10)
-        self.update_button = ttk.Button(
-            self.update_frame,
-            text="Actualizar aplicaci\u00f3n",
-            command=self.update_app,
-        )
-        self.update_button.pack(pady=5)
 
     # ------------------------------------------------------------------
     # Data acquisition
@@ -772,18 +760,31 @@ class NetworkMonitor(tk.Tk):
         self.load_network_config()
         self.stop_button_animation(self.apply_config_button)
 
+    def show_update_popup(self):
+        popup = tk.Toplevel(self)
+        popup.title("Actualizaci\u00f3n disponible")
+        ttk.Label(
+            popup,
+            text="Hay una actualizaci\u00f3n disponible. \u00bfDeseas instalarla?",
+        ).pack(padx=20, pady=10)
+        btn_frame = ttk.Frame(popup)
+        btn_frame.pack(pady=10)
+        ttk.Button(btn_frame, text="Cancelar", command=popup.destroy).pack(
+            side="left", padx=5
+        )
+        ttk.Button(
+            btn_frame,
+            text="Actualizar",
+            command=lambda: (popup.destroy(), self.update_app()),
+        ).pack(side="left", padx=5)
+        popup.transient(self)
+        popup.grab_set()
+
     def update_app(self):
         """Perform git pull, reinstall dependencies and restart."""
-        if not messagebox.askyesno(
-            "Actualizar",
-            "¿Deseas buscar e instalar actualizaciones?",
-        ):
-            return
-
         threading.Thread(target=self._update_app_thread, daemon=True).start()
 
     def _update_app_thread(self):
-        self.start_button_animation(self.update_button)
         script_dir = os.path.dirname(os.path.abspath(__file__))
         git_dir = os.path.join(script_dir, ".git")
 
@@ -795,7 +796,6 @@ class NetworkMonitor(tk.Tk):
                     "No se encontró repositorio Git en el directorio de la aplicación",
                 ),
             )
-            self.stop_button_animation(self.update_button)
             return
 
         try:
@@ -808,12 +808,10 @@ class NetworkMonitor(tk.Tk):
             ).stdout.strip()
         except subprocess.CalledProcessError as exc:
             self.after(0, lambda: messagebox.showerror("Actualizar", f"Error al comprobar remotos: {exc}"))
-            self.stop_button_animation(self.update_button)
             return
 
         if not remotes:
             self.after(0, lambda: messagebox.showerror("Actualizar", "El repositorio no tiene un remoto configurado"))
-            self.stop_button_animation(self.update_button)
             return
 
         try:
@@ -834,10 +832,8 @@ class NetworkMonitor(tk.Tk):
         except subprocess.CalledProcessError as exc:
             output = exc.stderr or exc.stdout or str(exc)
             self.after(0, lambda: messagebox.showerror("Actualizar", f"Error al actualizar:\n{output}"))
-            self.stop_button_animation(self.update_button)
             return
 
-        self.stop_button_animation(self.update_button)
         self.after(
             0,
             lambda: (
