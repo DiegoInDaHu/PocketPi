@@ -192,14 +192,16 @@ class NetworkMonitor(tk.Tk):
         )
         self.vlan_entry_scan.pack(side="left")
 
+        scan_btn_frame = ttk.Frame(scan_opts)
+        scan_btn_frame.pack(side="left", fill="x", expand=True)
         self.scan_button = ttk.Button(
-            scan_opts,
+            scan_btn_frame,
             text="Escanear red",
             command=self.scan_network,
             width=self.button_width,
         )
 
-        self.scan_button.place(relx=0.5, rely=0.5, anchor="center")
+        self.scan_button.pack(pady=0)
 
 
         columns = ("ip", "mac")
@@ -239,14 +241,16 @@ class NetworkMonitor(tk.Tk):
         )
         self.vlan_entry_ping.pack(side="left")
 
+        ping_btn_frame = ttk.Frame(ping_opts)
+        ping_btn_frame.pack(side="left", fill="x", expand=True)
         self.ping_button = ttk.Button(
-            ping_opts,
+            ping_btn_frame,
             text="Ping",
             command=self.run_ping,
             width=self.button_width,
         )
 
-        self.ping_button.place(relx=0.5, rely=0.5, anchor="center")
+        self.ping_button.pack(pady=0)
 
         self.ping_text = tk.Text(self.ping_frame, height=8, font=("Arial", 16))
         self.ping_text.pack(fill="both", expand=True, padx=5, pady=5)
@@ -1015,25 +1019,27 @@ class NetworkMonitor(tk.Tk):
         ).pack(padx=20, pady=10)
         btn_frame = ttk.Frame(popup)
         btn_frame.pack(pady=10)
-        ttk.Button(
+        cancel_button = ttk.Button(
             btn_frame,
             text="Cancelar",
             command=popup.destroy,
             width=self.button_width,
-        ).pack(side="left", padx=5)
+        )
+        cancel_button.pack(side="left", padx=5)
         self.update_button = ttk.Button(
             btn_frame,
             text="Actualizar",
-            command=lambda: self.update_app(popup),
+            command=lambda: self.update_app(popup, cancel_button),
             width=self.button_width,
         )
         self.update_button.pack(side="left", padx=5)
         popup.transient(self)
         popup.grab_set()
 
-    def update_app(self, popup):
+    def update_app(self, popup, cancel_button):
         """Perform git pull, reinstall dependencies and restart."""
         self.start_button_animation(self.update_button)
+        cancel_button.config(state="disabled")
         threading.Thread(target=self._update_app_thread, args=(popup,), daemon=True).start()
 
     def _update_app_thread(self, popup):
