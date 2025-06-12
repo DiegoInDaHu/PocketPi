@@ -556,7 +556,7 @@ class NetworkMonitor(tk.Tk):
 
         try:
             subprocess.run(
-                ["sudo", "git", "pull"],
+                ["sudo", "git", "pull", "--ff-only"],
                 cwd=script_dir,
                 check=True,
                 capture_output=True,
