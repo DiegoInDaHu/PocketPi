@@ -29,54 +29,6 @@ except ImportError:  # pragma: no cover - optional dependency
 from scapy.all import ARP, Ether, srp
 
 
-class NumericKeypad(tk.Toplevel):
-    """Simple on-screen numeric keypad."""
-
-    def __init__(self, master, entry=None):
-        super().__init__(master)
-        self.entry = entry
-        self.withdraw()
-        self.title("Teclado")
-        self.resizable(False, False)
-        self.attributes("-topmost", True)
-        self.configure(padx=5, pady=5)
-
-        buttons = [
-            ("7", 0, 0), ("8", 0, 1), ("9", 0, 2),
-            ("4", 1, 0), ("5", 1, 1), ("6", 1, 2),
-            ("1", 2, 0), ("2", 2, 1), ("3", 2, 2),
-            ("0", 3, 0), (".", 3, 1), ("\u232b", 3, 2),
-        ]
-        for text, r, c in buttons:
-            tk.Button(
-                self,
-                text=text,
-                width=4,
-                height=2,
-                command=lambda val=text: self._on_press(val),
-                font=("Arial", 14),
-            ).grid(row=r, column=c, padx=2, pady=2)
-
-        tk.Button(self, text="Cerrar", command=self.close, font=("Arial", 14)).grid(
-            row=4, column=0, columnspan=3, pady=(5, 0), sticky="nsew"
-        )
-
-        self.transient(master)
-
-    def close(self):
-        """Hide keypad and return focus to the main window."""
-        self.withdraw()
-        self.master.focus_set()
-
-    def _on_press(self, value):
-        if value == "\u232b":
-            pos = self.entry.index(tk.INSERT)
-            if pos > 0:
-                self.entry.delete(pos - 1)
-        else:
-            self.entry.insert(tk.INSERT, value)
-        self.entry.focus_set()
-
 
 class NetworkMonitor(tk.Tk):
     """Tkinter GUI to display and scan network information."""
@@ -85,8 +37,6 @@ class NetworkMonitor(tk.Tk):
         super().__init__()
         self.title("PocketPi Network Analyzer")
         self.geometry("800x480")
-        self.keypad = None
-        self.tab_switching = False
 
         interfaces = self.get_interfaces()
         self.interface_var = tk.StringVar(value=interfaces[0] if interfaces else "")
@@ -111,8 +61,6 @@ class NetworkMonitor(tk.Tk):
         self.update_available = self.check_updates()
         self.create_widgets()
         self.update_public_ip()
-        self.bind_all("<Button-1>", self._check_hide_keypad, add="+")
-        self.bind_all("<FocusIn>", self._check_focus_in, add="+")
         if self.update_available:
             self.after(100, self.show_update_popup)
 
@@ -156,7 +104,6 @@ class NetworkMonitor(tk.Tk):
         self.notebook.add(self.blinker_frame, text="Port blinker")
         self.notebook.add(self.config_frame, text="Configurar adaptador")
         self.notebook.pack(fill="both", expand=True, padx=10, pady=10)
-        self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_changed)
 
         # Network info widgets
         local_frame = ttk.LabelFrame(self.info_frame, text="Red local")
@@ -239,7 +186,6 @@ class NetworkMonitor(tk.Tk):
             width=8,
         )
         self.vlan_entry_scan.pack(side="left")
-        self.vlan_entry_scan.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.vlan_entry_scan))
 
         center_scan = ttk.Frame(scan_opts)
         center_scan.pack(side="left", expand=True, fill="x")
@@ -267,7 +213,6 @@ class NetworkMonitor(tk.Tk):
         ttk.Label(self.ping_frame, text="Host o IP:").pack(pady=5)
         self.ping_entry = ttk.Entry(self.ping_frame)
         self.ping_entry.pack(fill="x", padx=5)
-        self.ping_entry.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.ping_entry))
 
         ping_opts = ttk.Frame(self.ping_frame)
         ping_opts.pack(fill="x", pady=2)
@@ -283,7 +228,6 @@ class NetworkMonitor(tk.Tk):
             width=8,
         )
         self.vlan_entry_ping.pack(side="left")
-        self.vlan_entry_ping.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.vlan_entry_ping))
 
         center_ping = ttk.Frame(ping_opts)
         center_ping.pack(side="left", expand=True, fill="x")
@@ -301,11 +245,9 @@ class NetworkMonitor(tk.Tk):
         ttk.Label(self.external_frame, text="Host o dominio:").pack(pady=5)
         self.test_host_entry = ttk.Entry(self.external_frame)
         self.test_host_entry.pack(fill="x", padx=5)
-        self.test_host_entry.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.test_host_entry))
         ttk.Label(self.external_frame, text="Puerto:").pack(pady=5)
         self.test_port_entry = ttk.Entry(self.external_frame)
         self.test_port_entry.pack(fill="x", padx=5)
-        self.test_port_entry.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.test_port_entry))
         self.test_button = ttk.Button(
             self.external_frame, text="Probar conexi\u00f3n", command=self.test_connection
         )
@@ -320,7 +262,6 @@ class NetworkMonitor(tk.Tk):
             self.blinker_frame, textvariable=self.blink_seconds_var
         )
         self.blink_seconds_entry.pack(fill="x", padx=5)
-        self.blink_seconds_entry.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.blink_seconds_entry))
         self.blink_button = ttk.Button(
             self.blinker_frame, text="Parpadear puerto", command=self.blink_port
         )
@@ -364,25 +305,21 @@ class NetworkMonitor(tk.Tk):
         ttk.Label(self.config_frame, text="IP:").grid(row=row, column=0, sticky="w", pady=2)
         self.ip_entry = ttk.Entry(self.config_frame)
         self.ip_entry.grid(row=row, column=1, sticky="ew", pady=2)
-        self.ip_entry.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.ip_entry))
         row += 1
 
         ttk.Label(self.config_frame, text="M\u00e1scara:").grid(row=row, column=0, sticky="w", pady=2)
         self.mask_entry = ttk.Entry(self.config_frame)
         self.mask_entry.grid(row=row, column=1, sticky="ew", pady=2)
-        self.mask_entry.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.mask_entry))
         row += 1
 
         ttk.Label(self.config_frame, text="Gateway:").grid(row=row, column=0, sticky="w", pady=2)
         self.gw_entry = ttk.Entry(self.config_frame)
         self.gw_entry.grid(row=row, column=1, sticky="ew", pady=2)
-        self.gw_entry.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.gw_entry))
         row += 1
 
         ttk.Label(self.config_frame, text="DNS:").grid(row=row, column=0, sticky="w", pady=2)
         self.dns_entry = ttk.Entry(self.config_frame)
         self.dns_entry.grid(row=row, column=1, sticky="ew", pady=2)
-        self.dns_entry.bind("<FocusIn>", lambda e: self.show_numeric_keypad(self.dns_entry))
         row += 1
 
         self.apply_config_button = ttk.Button(
@@ -397,68 +334,6 @@ class NetworkMonitor(tk.Tk):
         self.config_frame.columnconfigure(1, weight=1)
         self.toggle_static_fields()
         self.load_network_config()
-
-    def show_numeric_keypad(self, widget, _event=None):
-        """Display on-screen keypad for the focused entry."""
-        if self.keypad is None or not self.keypad.winfo_exists():
-            self.keypad = NumericKeypad(self, widget)
-        else:
-            self.keypad.entry = widget
-        if self.keypad.state() == "withdrawn":
-            self.keypad.deiconify()
-        self.keypad.lift()
-        
-
-    def hide_numeric_keypad(self, _event=None):
-        """Hide the on-screen keypad if visible."""
-        if self.keypad is not None and self.keypad.winfo_exists():
-            self.keypad.withdraw()
-        self.focus_set()
-
-    def _belongs_to_combobox(self, widget):
-        """Return True if widget is part of a ttk.Combobox."""
-        parent = widget
-        while parent is not None:
-            if isinstance(parent, ttk.Combobox):
-                return True
-            parent = getattr(parent, "master", None)
-        return False
-
-    def _check_hide_keypad(self, event):
-        widget = event.widget
-        if self.keypad is None or not self.keypad.winfo_exists():
-            return
-        if widget.winfo_toplevel() == self.keypad:
-            return
-        if isinstance(widget, (tk.Entry, ttk.Entry)) and not self._belongs_to_combobox(widget):
-            self.show_numeric_keypad(widget)
-        else:
-            self.hide_numeric_keypad()
-
-    def _check_focus_in(self, event):
-        if self.tab_switching:
-            self.tab_switching = False
-            return
-        widget = event.widget
-        if widget.winfo_toplevel() == self.keypad:
-            return
-        if isinstance(widget, (tk.Entry, ttk.Entry)) and not self._belongs_to_combobox(widget):
-            if (
-                self.keypad is None
-                or not self.keypad.winfo_exists()
-                or self.keypad.state() == "withdrawn"
-            ):
-                self.show_numeric_keypad(widget)
-            else:
-                self.keypad.entry = widget
-        else:
-            self.hide_numeric_keypad()
-
-    def on_tab_changed(self, _event=None):
-        """Clear focus and hide keypad when switching tabs."""
-        self.tab_switching = True
-        self.focus_set()
-        self.hide_numeric_keypad()
 
 
     # ------------------------------------------------------------------
@@ -959,8 +834,6 @@ class NetworkMonitor(tk.Tk):
         state = "normal" if self.config_mode.get() == "static" else "disabled"
         for widget in (self.ip_entry, self.mask_entry, self.gw_entry, self.dns_entry):
             widget.configure(state=state)
-        if state == "disabled":
-            self.hide_numeric_keypad()
 
     def load_network_config(self):
         """Detect current network configuration for the selected interface."""
