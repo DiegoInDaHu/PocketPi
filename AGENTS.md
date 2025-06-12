@@ -19,6 +19,10 @@ de Python.
    `python3 -m py_compile main.py` para comprobar que no existen errores de
    sintaxis.
 2. Si se anaden nuevas dependencias, actualiza `install.sh` y documenta los
-   cambios en `README.md`.
-3. Para probar la aplicacion en Raspbian, ejecuta `bash install.sh` y luego
-   `sudo python3 main.py`.
+ cambios en `README.md`.
+3. Para probar la aplicacion en Raspbian, ejecuta `bash install.sh` (el script
+   instala los paquetes con el interprete devuelto por `which python3`) y luego
+   `sudo $(which python3) main.py`.
+4. Si al ejecutar la aplicación falta algún módulo de Python, vuelve a
+   ejecutar `bash install.sh` o instala el paquete manualmente con
+   `sudo $(which python3) -m pip install nombre_del_paquete`.

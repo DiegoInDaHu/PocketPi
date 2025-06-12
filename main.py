@@ -12,6 +12,10 @@ import socket
 import netifaces
 import psutil
 
+if not os.environ.get("DISPLAY"):
+    sys.stderr.write("Error: no se encontró un entorno gráfico (DISPLAY).\n")
+    sys.exit(1)
+
 try:
     import nmap
 except ImportError:  # pragma: no cover - optional dependency
@@ -45,6 +49,9 @@ class NetworkMonitor(tk.Tk):
         self.vlan_var = tk.StringVar()
         self.poe_var = tk.StringVar()
         self.lldp_var = tk.StringVar(value="N/A")
+
+        # VLAN ID for testing
+        self.vlan_id_var = tk.StringVar()
 
         # Track animations for buttons
         self._spinners = {}
@@ -131,6 +138,10 @@ class NetworkMonitor(tk.Tk):
         row += 1
 
         # Scan widgets
+        ttk.Label(self.scan_frame, text="VLAN ID (opcional):").pack(pady=2)
+        self.vlan_entry_scan = ttk.Entry(self.scan_frame, textvariable=self.vlan_id_var)
+        self.vlan_entry_scan.pack(fill="x", padx=5)
+
         self.scan_button = ttk.Button(self.scan_frame, text="Escanear red", command=self.scan_network)
         self.scan_button.pack(pady=5)
 
@@ -147,6 +158,10 @@ class NetworkMonitor(tk.Tk):
         self.port_text.pack(fill="both", expand=True, padx=5, pady=5)
 
         # Ping widgets
+        ttk.Label(self.ping_frame, text="VLAN ID (opcional):").pack(pady=2)
+        self.vlan_entry_ping = ttk.Entry(self.ping_frame, textvariable=self.vlan_id_var)
+        self.vlan_entry_ping.pack(fill="x", padx=5)
+
         ttk.Label(self.ping_frame, text="Host o IP:").pack(pady=5)
         self.ping_entry = ttk.Entry(self.ping_frame)
         self.ping_entry.pack(fill="x", padx=5)
@@ -321,6 +336,34 @@ class NetworkMonitor(tk.Tk):
         return "N/A"
 
     @staticmethod
+    def ensure_vlan_interface(base_iface, vlan):
+        """Return vlan interface name, creating it if needed."""
+        vlan_iface = f"{base_iface}.{vlan}"
+        if vlan_iface not in netifaces.interfaces():
+            try:
+                subprocess.run([
+                    "ip",
+                    "link",
+                    "add",
+                    "link",
+                    base_iface,
+                    "name",
+                    vlan_iface,
+                    "type",
+                    "vlan",
+                    "id",
+                    vlan,
+                ], check=True)
+                subprocess.run(["ip", "link", "set", vlan_iface, "up"], check=True)
+            except Exception:
+                messagebox.showerror(
+                    "Error",
+                    f"No se pudo crear la interfaz VLAN {vlan_iface}",
+                )
+                return None
+        return vlan_iface
+
+    @staticmethod
     def detect_poe():
         # Placeholder for PoE detection logic
         return "N/A"
@@ -410,6 +453,14 @@ class NetworkMonitor(tk.Tk):
         self.start_button_animation(self.scan_button)
         self.host_tree.delete(*self.host_tree.get_children())
         iface = self.interface_var.get()
+        vlan = self.vlan_id_var.get().strip()
+        if vlan:
+            vlan_iface = self.ensure_vlan_interface(iface, vlan)
+            if not vlan_iface:
+                self.stop_button_animation(self.scan_button)
+                return
+            iface = vlan_iface
+            messagebox.showinfo("VLAN", f"Escaneando red en VLAN {vlan}")
         ip = f"{self.get_ip(iface)}/24"
         ether = Ether(dst="ff:ff:ff:ff:ff:ff")
         arp = ARP(pdst=ip)
@@ -441,11 +492,24 @@ class NetworkMonitor(tk.Tk):
 
         scanner = nmap.PortScanner()
         try:
-            scanner.scan(ip, "1-1024")
+            iface = self.interface_var.get()
+            vlan = self.vlan_id_var.get().strip()
+            args = None
+            if vlan:
+                vlan_iface = self.ensure_vlan_interface(iface, vlan)
+                if not vlan_iface:
+                    return
+                args = f"-e {vlan_iface}"
+            if args:
+                scanner.scan(ip, "1-1024", arguments=args)
+            else:
+                scanner.scan(ip, "1-1024")
             for proto in scanner[ip].all_protocols():
                 for port in sorted(scanner[ip][proto]):
                     state = scanner[ip][proto][port]["state"]
                     self.port_text.insert(tk.END, f"{port}/{proto}: {state}\n")
+            if vlan:
+                self.port_text.insert(tk.END, f"\n[VLAN {vlan}]\n")
         except Exception as exc:  # pragma: no cover - runtime issues
             self.port_text.insert(tk.END, f"Error: {exc}\n")
 
@@ -530,16 +594,23 @@ class NetworkMonitor(tk.Tk):
 
     def _ping_thread(self, host):
         try:
-            proc = subprocess.run([
-                "ping",
-                "-c",
-                "4",
-                host,
-            ], capture_output=True, text=True)
+            iface = self.interface_var.get()
+            vlan = self.vlan_id_var.get().strip()
+            cmd = ["ping", "-c", "4"]
+            if vlan:
+                vlan_iface = self.ensure_vlan_interface(iface, vlan)
+                if not vlan_iface:
+                    self.stop_button_animation(self.ping_button)
+                    return
+                cmd.extend(["-I", vlan_iface])
+            cmd.append(host)
+            proc = subprocess.run(cmd, capture_output=True, text=True)
             output = proc.stdout or proc.stderr
         except Exception as exc:  # pragma: no cover - runtime issues
             output = str(exc)
         self.ping_text.insert(tk.END, output)
+        if vlan:
+            self.ping_text.insert(tk.END, f"\n[VLAN {vlan}]\n")
         self.stop_button_animation(self.ping_button)
 
     # ------------------------------------------------------------------
