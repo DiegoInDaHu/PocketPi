@@ -925,6 +925,8 @@ class NetworkMonitor(tk.Tk):
         state = "normal" if self.config_mode.get() == "static" else "disabled"
         for widget in (self.ip_entry, self.mask_entry, self.gw_entry, self.dns_entry):
             widget.configure(state=state)
+        if state == "disabled":
+            self.hide_numeric_keypad()
 
     def load_network_config(self):
         """Detect current network configuration for the selected interface."""
