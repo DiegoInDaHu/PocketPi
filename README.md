@@ -27,6 +27,7 @@ pantallas táctiles.
   Las VLAN temporales creadas para estas pruebas se eliminan automáticamente
   al iniciar la aplicación para evitar que queden interfaces residuales.
 - `install.sh`: script para instalar las dependencias necesarias en Raspberry Pi OS o sistemas basados en Debian. Emplea el Python obtenido con `which python3` para que las bibliotecas funcionen al ejecutar la aplicación con privilegios (incluye `pyroute2` para detectar VLAN y `ethtool` para el parpadeo de puertos).
+- `displaypi.py`: abre una URL en el navegador Chromium en modo kiosco, sin depender de PyQt.
 
 ## Uso
 
@@ -43,6 +44,11 @@ pantallas táctiles.
    ```
    Se recomienda ejecutar como superusuario para el escaneo de red. Si no se dispone de un entorno gráfico, el programa finalizará mostrando un mensaje de error.
 
-3. Al iniciar la aplicación se comprueba si existen nuevas versiones del código. Si hay una actualización disponible aparecerá un cuadro de diálogo que permite instalarla o cancelarla. El proceso ejecuta `git pull --ff-only` e `install.sh` con `sudo` para aplicar las actualizaciones sin crear commits de fusión.
+3. Si quieres mostrar una página en pantalla completa con Chromium, ejecuta:
+   ```bash
+   sudo $(which python3) displaypi.py http://localhost
+   ```
+   Esto abrirá el navegador en modo kiosco.
+4. Al iniciar la aplicación se comprueba si existen nuevas versiones del código. Si hay una actualización disponible aparecerá un cuadro de diálogo que permite instalarla o cancelarla. El proceso ejecuta `git pull --ff-only` e `install.sh` con `sudo` para aplicar las actualizaciones sin crear commits de fusión.
 
 Recuerda que la comprobación de actualizaciones solo funciona si ejecutas la aplicación desde un clon de Git con un remoto accesible.
