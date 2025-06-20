@@ -3,7 +3,8 @@
 set -e
 
 sudo apt-get update
-sudo apt-get install -y python3 python3-pip python3-tk nmap arp-scan iputils-ping iproute2 ethtool
+sudo apt-get install -y python3 python3-pip python3-tk \
+    nmap arp-scan iputils-ping iproute2 ethtool chromium-browser
 
 PYTHON=$(which python3)
 PIP_OPTS="--ignore-installed --upgrade"
